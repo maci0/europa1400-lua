@@ -544,7 +544,7 @@ We welcome contributions! Here's how to get involved:
 
 ## 📄 **License**
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **GPLv3 License** - see the [LICENSE](LICENSE) file for details.
 
 **Important**: This software is for educational and research purposes. Always respect game terms of service and applicable laws when using reverse engineering tools.
 
