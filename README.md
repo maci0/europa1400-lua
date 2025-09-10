@@ -198,10 +198,10 @@ This project is licensed under the **GPLv3 License** - see the [LICENSE](LICENSE
 
 ## 🙏 **Acknowledgments**
 
-- **LuaJIT Team** - Excellent Lua implementation with FFI
-- **dxwrapper Project** - D3D8/D3D9/Vulkan compatibility layer
-- **Ghidra Team** - Revolutionary reverse engineering platform
-- **Europa 1400 Community** - Game preservation and modding support
+- **[LuaJIT Team](https://luajit.org/)** - Excellent Lua implementation with FFI
+- **[dxwrapper Project](https://github.com/elishacloud/dxwrapper)** - D3D8/D3D9/Vulkan compatibility layer
+- **[Ghidra Team](https://ghidra-sre.org/)** - Revolutionary reverse engineering platform
+- **[Europa 1400 Community](https://europa1400-wiki.eulenet.io/)** - Game preservation and reverse engineering support
 - **Contributors** - Everyone who helps improve this project
 
 ---
