@@ -47,6 +47,21 @@ This is a **DLL injection mod** that provides:
 
 ---
 
+## 📸 **Screenshots**
+
+### Console Interface & System Diagnostics
+![Europa 1400 Lua Console Interface](media/screenshot1.png)
+
+*The interactive Lua console showing system information, memory diagnostics, and command history features.*
+
+### Window Info  
+![Game Function Analysis](media/screenshot2.png)
+
+*The interactive Lua console showing window information*
+
+
+---
+
 ## 🚀 **Key Features**
 
 ### **🎮 Advanced Game Function System**
