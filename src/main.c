@@ -436,7 +436,7 @@ static DWORD WINAPI ConsoleThread(LPVOID param)
 
     // Load standard Lua libraries
     luaL_openlibs(L);
-    PrintColored(COLOR_INFO, "Lua %s initialized\n", LUA_VERSION);
+    PrintColored(COLOR_INFO, "%s initialized\n", LUA_VERSION);
 
     // Load initialization script
     if (!LoadInitScript(L))
