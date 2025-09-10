@@ -88,4 +88,5 @@ local function show_welcome()
 end
 
 -- Initialize console
+beep()
 show_welcome()

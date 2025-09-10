@@ -207,7 +207,7 @@ static BOOL LoadInitScript(lua_State *L)
         return FALSE;
     }
 
-    PrintColored(COLOR_SUCCESS, "✓ Initialization complete\n\n");
+    PrintColored(COLOR_SUCCESS, "Initialization complete\n\n");
     return TRUE;
 }
 
