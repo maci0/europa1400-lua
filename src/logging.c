@@ -2,6 +2,7 @@
  * logging.c: A simple file-based logging implementation.
  */
 
+#include <winsock2.h>
 #define WIN32_LEAN_AND_MEAN
 #include <shlwapi.h>
 #include <stdarg.h>
@@ -10,11 +11,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <windows.h>
-#include <winsock2.h>
 
 #include "logging.h"
 
-logging_context       g_logctx = {0};
+logging_context g_logctx = {0};
 
 static const uint32_t max_log_lines = 50000u; /* Max lines before rollover */
 
@@ -32,7 +32,7 @@ static void reset_log_file(void)
 
 // Writes a formatted string to the log file.
 // This function is thread-safe.
-void logf(const char *fmt, ...)
+void hook_logf(const char *fmt, ...)
 {
     if (!g_logctx.critical_section_initialized || g_logctx.log_file == INVALID_HANDLE_VALUE)
     {
@@ -51,26 +51,45 @@ void logf(const char *fmt, ...)
     char timestamp[64];
     int  timestamp_len = snprintf(timestamp, sizeof(timestamp), "[%04d-%02d-%02d %02d:%02d:%02d.%03d] ", st.wYear,
                                   st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+    if (timestamp_len < 0)
+        timestamp_len = 0;
+    if ((size_t)timestamp_len >= sizeof(timestamp))
+        timestamp_len = (int)sizeof(timestamp) - 1;
 
     char buffer[1024];
-    memcpy(buffer, timestamp, timestamp_len);
+    if (timestamp_len > 0)
+        memcpy(buffer, timestamp, (size_t)timestamp_len);
 
     va_list ap;
     va_start(ap, fmt);
-    int len = vsnprintf(buffer + timestamp_len, sizeof(buffer) - timestamp_len, fmt, ap);
+    int len = vsnprintf(buffer + timestamp_len, sizeof(buffer) - (size_t)timestamp_len, fmt, ap);
     va_end(ap);
+
+    if (len < 0)
+    {
+        LeaveCriticalSection(&g_logctx.critical_section);
+        return;
+    }
+    if ((size_t)len >= sizeof(buffer) - (size_t)timestamp_len)
+    {
+        len = (int)(sizeof(buffer) - (size_t)timestamp_len - 1);
+        buffer[sizeof(buffer) - 1] = '\0';
+    }
 
     if (len > 0)
     {
         if (buffer[timestamp_len + len - 1] != '\n')
         {
-            buffer[timestamp_len + len] = '\n';
-            buffer[timestamp_len + len + 1] = '\0';
-            len++;
+            if (timestamp_len + len + 1 < (int)sizeof(buffer))
+            {
+                buffer[timestamp_len + len] = '\n';
+                buffer[timestamp_len + len + 1] = '\0';
+                len++;
+            }
         }
 
         DWORD written;
-        WriteFile(g_logctx.log_file, buffer, timestamp_len + len, &written, NULL);
+        WriteFile(g_logctx.log_file, buffer, (DWORD)(timestamp_len + len), &written, NULL);
         FlushFileBuffers(g_logctx.log_file);
     }
 
@@ -103,12 +122,12 @@ void log_winsock_error(const char *prefix, SOCKET s, int error)
     char *description = GetErrorDescription(error);
     if (description)
     {
-        logf("%s: %s (%d) on socket %u", prefix, description, error, (unsigned)s);
+        hook_logf("%s: %s (%d) on socket %u", prefix, description, error, (unsigned)s);
         LocalFree(description);
     }
     else
     {
-        logf("%s: Unknown error (%d) on socket %u", prefix, error, (unsigned)s);
+        hook_logf("%s: Unknown error (%d) on socket %u", prefix, error, (unsigned)s);
     }
 }
 
@@ -118,9 +137,18 @@ bool init_logging(HMODULE hModule)
     g_logctx.critical_section_initialized = true;
 
     wchar_t dllPath[MAX_PATH];
-    GetModuleFileNameW(hModule, dllPath, MAX_PATH);
-    PathRemoveFileSpecW(dllPath);
-    wcscat_s(dllPath, MAX_PATH, L"\\hook_log.txt");
+    if (GetModuleFileNameW(hModule, dllPath, MAX_PATH) == 0)
+    {
+        return false;
+    }
+    if (!PathRemoveFileSpecW(dllPath))
+    {
+        return false;
+    }
+    if (wcscat_s(dllPath, MAX_PATH, L"\\hook_log.txt") != 0)
+    {
+        return false;
+    }
 
     g_logctx.log_file =
         CreateFileW(dllPath, GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -131,7 +159,7 @@ bool init_logging(HMODULE hModule)
     }
 
     SetFilePointer(g_logctx.log_file, 0, NULL, FILE_END);
-    logf("[HOOK] DLL attached to process %lu, log: %ls", GetCurrentProcessId(), dllPath);
+    hook_logf("[HOOK] DLL attached to process %lu, log: %ls", GetCurrentProcessId(), dllPath);
     return true;
 }
 

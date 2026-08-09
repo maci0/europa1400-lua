@@ -25,8 +25,10 @@ Common issues and solutions for the Europa 1400 Lua Console.
 | Problem | Cause | Solution |
 |---------|-------|----------|
 | Read returns nil | Invalid memory address | Check address validity, process permissions |
-| Write fails | Read-only memory | Find writable memory regions |
+| Write fails | Read-only memory | `patch.*` auto-uses VirtualProtect; use `watch.diff` to see change |
 | Incorrect data | Wrong data type | Match FFI type to actual data structure |
+| Pattern finds 0 hits | ASLR / wrong base | Use `scan.regions()` to enumerate; try `sig.masked` pattern |
+| Linux `loadfile` OK but load fails | `kernel32` not on Linux | Expected — modules run in-game on Windows; `loadfile`-clean is the Linux check |
 
 ## Build Issues
 
@@ -35,6 +37,22 @@ Common issues and solutions for the Europa 1400 Lua Console.
 | Zig not found | Missing Zig compiler | Install Zig from official website |
 | LuaJIT build fails | Missing source | Ensure `vendor/luajit/` contains source |
 | Link errors | Wrong architecture | Build for correct target (x86/x64) |
+
+## Catalog / Hunt
+
+| Problem | Cause | Solution |
+|---------|-------|----------|
+| `catalog.hunt` finds nothing | Tags too narrow | Try broader `presets.hunt("map")` or wider base/size |
+| `catalog.register_all` does nothing | No verified addresses | Still candidates — fill `address` via `auto.discover`/`finder` first |
+
+## New Modules (scan / valuescan / pointer / xrefs / finder / patch / watch / struct / trace / disasm / sig)
+
+| Problem | Cause | Solution |
+|---------|-------|----------|
+| No xrefs found | Wrong base/size | Use `scan.regions()` then `xrefs.to(addr, base, size)` with wider window |
+| `sig.verify` fails | Volatile bytes | Use `sig.masked` / `sig.func` to wildcard CALL/JMP immediates |
+| `watch` never fires | Value not written frequently | Lower interval or use `watch.diff` around the action |
+| `struct.dump` is empty | No `ffi.cdef` yet | `ffi.cdef` the struct first, then `struct.register` |
 
 ## General Tips
 

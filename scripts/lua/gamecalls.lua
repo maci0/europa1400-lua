@@ -62,15 +62,7 @@ local debug_settings = {
 local call_log = {}
 local memory_log = {}
 
--- Windows memory constants
-local MEM_COMMIT = 0x1000
-local MEM_RESERVE = 0x2000  
-local MEM_RELEASE = 0x8000
-local PAGE_EXECUTE_READWRITE = 0x40
 
--- Default timeouts (milliseconds)
-local DEFAULT_THREAD_TIMEOUT = 5000
-local DEFAULT_SAVE_FILE = "lua/functions_save.lua"
 
 --============================================================================
 -- UTILITY FUNCTIONS
@@ -101,11 +93,9 @@ end
 local function format_parameters(...)
     local args = {...}
     local formatted = {}
-    
     for i, arg in ipairs(args) do
         local arg_str
         if type(arg) == "number" then
-            -- Show large numbers in hex format
             if arg > 65535 then
                 arg_str = string.format("0x%08X (%d)", arg, arg)
             else
@@ -114,71 +104,43 @@ local function format_parameters(...)
         elseif type(arg) == "string" then
             arg_str = '"' .. arg .. '"'
         elseif type(arg) == "cdata" then
-            arg_str = string.format("cdata: 0x%08X", tonumber(ffi.cast("uintptr_t", arg)))
+            local ok, val = pcall(function() return tonumber(ffi.cast("uintptr_t", arg)) end)
+            if ok then arg_str = string.format("cdata: 0x%08X", val)
+            else arg_str = tostring(arg) end
         else
             arg_str = tostring(arg)
         end
         table.insert(formatted, arg_str)
     end
-    
     return table.concat(formatted, ", ")
 end
 
 --============================================================================
--- LOGGING SYSTEM  
+-- LOGGING SYSTEM
 --============================================================================
 local function log_entry(entry_type, data)
     if not debug_settings.enabled then return end
-    
+
     local timestamp = os.date("%H:%M:%S")
     local entry = {
         timestamp = timestamp,
         type = entry_type,
         data = data
     }
-    
+
     if entry_type == "call" and debug_settings.log_calls then
         table.insert(call_log, entry)
         if #call_log > debug_settings.max_log_entries then
             table.remove(call_log, 1)
         end
-        
-        if debug_settings.log_calls then
-            print(string.format("[%s] CALL: %s", timestamp, data.summary))
-        end
+        print(string.format("[%s] CALL: %s", timestamp, data.summary))
     elseif entry_type == "memory" and debug_settings.log_memory_ops then
         table.insert(memory_log, entry)
         if #memory_log > debug_settings.max_log_entries then
             table.remove(memory_log, 1)
         end
-        
-        if debug_settings.log_memory_ops then
-            print(string.format("[%s] MEMORY: %s", timestamp, data.summary))
-        end
+        print(string.format("[%s] MEMORY: %s", timestamp, data.summary))
     end
-end
-
-local function format_parameters(...)
-    local args = {...}
-    local formatted = {}
-    
-    for i, arg in ipairs(args) do
-        local arg_str
-        if type(arg) == "number" then
-            if arg > 65535 then
-                arg_str = string.format("0x%08X (%d)", arg, arg)
-            else
-                arg_str = tostring(arg)
-            end
-        elseif type(arg) == "string" then
-            arg_str = '"' .. arg .. '"'
-        else
-            arg_str = tostring(arg)
-        end
-        table.insert(formatted, arg_str)
-    end
-    
-    return table.concat(formatted, ", ")
 end
 
 --============================================================================
@@ -195,21 +157,20 @@ function register_function(name, address, signature, description)
     if not name or type(name) ~= "string" or name == "" then
         error("Function name must be a non-empty string")
     end
-    
     if not address then
         error("Function address is required")
     end
-    
     -- Validate signature
     local valid, err = validate_signature(signature)
     if not valid then
         error("Invalid signature: " .. err)
     end
-    
-    -- Convert hex string address to number if needed
+    -- Convert address to number (handle "0x..." prefix and bare hex)
     local addr_num = address
     if type(address) == "string" then
-        addr_num = tonumber(address, 16)
+        local s = address:gsub("^%s+", ""):gsub("%s+$", "")
+        s = s:gsub("^0[xX]", "")
+        addr_num = tonumber(s, 16)
         if not addr_num then
             error("Invalid address format: " .. address)
         end
@@ -386,13 +347,27 @@ function list_functions()
     end
 end
 
+local function parse_addr(a)
+    if type(a) == "number" then return a end
+    if type(a) ~= "string" then return nil end
+    local s = a:gsub("^%s+", ""):gsub("%s+$", ""):gsub("^0[xX]", "")
+    return tonumber(s, 16)
+end
+
 -- Read memory at a specific address
--- @param address: Memory address
+-- @param address: Memory address (number or hex string with optional 0x)
 -- @param size: Number of bytes to read
 -- @param type: FFI type (e.g., "int", "char", "float")
 function read_memory(address, size, ffi_type)
-    local addr_num = type(address) == "string" and tonumber(address, 16) or address
-    local buffer = ffi.new(ffi_type .. "[?]", size / ffi.sizeof(ffi_type))
+    local addr_num = parse_addr(address)
+    if not addr_num or type(size) ~= "number" or type(ffi_type) ~= "string" then
+        error("read_memory: invalid arguments (address, size, type)")
+    end
+    local elem_size = ffi.sizeof(ffi_type)
+    if not elem_size or elem_size == 0 or size % elem_size ~= 0 then
+        error("read_memory: size must be a multiple of sizeof(" .. ffi_type .. ")")
+    end
+    local buffer = ffi.new(ffi_type .. "[?]", size / elem_size)
     local hProcess = kernel32.GetCurrentProcess()
     
     local mem_info = {
@@ -429,11 +404,11 @@ function read_memory(address, size, ffi_type)
 end
 
 -- Write memory at a specific address
--- @param address: Memory address
+-- @param address: Memory address (number or hex string)
 -- @param data: Data to write (FFI array or single value)
 -- @param size: Number of bytes to write
 function write_memory(address, data, size)
-    local addr_num = type(address) == "string" and tonumber(address, 16) or address
+    local addr_num = parse_addr(address)
     local hProcess = kernel32.GetCurrentProcess()
     
     local mem_info = {
@@ -475,28 +450,29 @@ function get_module_base(module_name)
 end
 
 -- Save function registrations to file
--- @param filename: File to save to (default: "functions.lua")
+-- @param filename: File to save to (default: "functions_save.lua")
 function save_functions(filename)
     filename = filename or "lua/functions_save.lua"
-    
-    local file = io.open(filename, "w")
+
+    local file, open_err = io.open(filename, "w")
     if not file then
-        error("Could not open file for writing: " .. filename)
+        error("Could not open file for writing: " .. filename .. (open_err and (" (" .. open_err .. ")") or ""))
     end
-    
+
+    local function esc(s) return (tostring(s):gsub("\\", "\\\\"):gsub('"', '\\"'):gsub("\n", "\\n")) end
     file:write("-- Auto-generated function registrations\n")
     file:write("-- Generated: " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n\n")
-    file:write("local game = require('lua/gamecalls')\n\n")
-    
+    file:write("local game = dofile('lua/gamecalls.lua')\n\n")
+
     for name, info in pairs(function_registry) do
         file:write(string.format('game.register("%s", 0x%08X, "%s", "%s")\n',
-                                name, info.address, info.signature, info.description))
+                                esc(name), info.address, esc(info.signature), esc(info.description)))
     end
-    
+
     file:write("\nreturn game\n")
     file:close()
-    
-    print(string.format("Saved %d function registrations to: %s", 
+
+    print(string.format("Saved %d function registrations to: %s",
                        table_count(function_registry), filename))
 end
 
@@ -504,18 +480,20 @@ end
 -- @param filename: File to load from
 function load_functions(filename)
     filename = filename or "lua/functions_save.lua"
-    
+
     local chunk, err = loadfile(filename)
     if not chunk then
         error("Could not load functions file: " .. (err or "unknown error"))
     end
-    
-    local old_count = table_count(function_registry)
-    chunk() -- Execute the file
-    local new_count = table_count(function_registry)
-    
+
+    local ok, load_err = pcall(chunk)
+    if not ok then
+        error("Error executing functions file: " .. tostring(load_err))
+    end
+
+    -- loadfile files produced by save_functions re-register via game.register,
+    -- so counting before/after is meaningful.
     print(string.format("Loaded function registrations from: %s", filename))
-    print(string.format("Functions loaded: %d (total: %d)", new_count - old_count, new_count))
 end
 
 -- Debug and logging management functions
@@ -588,12 +566,14 @@ function clear_logs()
     print("All logs cleared")
 end
 
--- Helper function to count table entries
-function table_count(t)
-    local count = 0
-    for _ in pairs(t) do count = count + 1 end
-    return count
+
+
+-- Registry accessors (for pointer/xref workflows that need raw addresses)
+function get_address(name)
+    local e = function_registry[name]
+    return e and e.address or nil
 end
+function get_registry() return function_registry end
 
 -- Export the API
 return {
@@ -602,6 +582,8 @@ return {
     call = call_function,
     call_main = call_function_main,
     list = list_functions,
+    get_address = get_address,
+    get_registry = get_registry,
     read_mem = read_memory,
     write_mem = write_memory,
     get_module_base = get_module_base,

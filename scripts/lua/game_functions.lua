@@ -9,7 +9,7 @@
 --   3. Call functions with game.call(name, ...)
 --   4. Save your work with game.save("filename.lua")
 
-local game = require('lua/gamecalls')
+local game = dofile('lua/gamecalls.lua')
 
 --============================================================================
 -- FUNCTION REGISTRATIONS

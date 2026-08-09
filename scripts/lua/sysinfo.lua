@@ -24,7 +24,7 @@ ffi.cdef[[
     void* GetProcAddress(void* hModule, const char* lpProcName);
     
     // System information
-    int GetSystemInfo(void* lpSystemInfo);
+    void GetSystemInfo(void* lpSystemInfo);
     int GlobalMemoryStatusEx(void* lpBuffer);
     
     // Window management
@@ -74,13 +74,7 @@ local kernel32 = ffi.load('kernel32')
 -- CONSTANTS
 --============================================================================
 
--- Window enumeration constants
-local GW_HWNDFIRST = 0
-local GW_HWNDLAST = 1
-local GW_HWNDNEXT = 2
-local GW_HWNDPREV = 3
-local GW_OWNER = 4
-local GW_CHILD = 5
+
 
 --============================================================================
 -- UTILITY FUNCTIONS
@@ -229,23 +223,22 @@ local function get_window_info(hwnd)
 end
 
 -- Window enumeration callback function
-local enum_callback = ffi.cast("int(__stdcall *)(void*, uintptr_t)", function(hwnd, lParam)
+-- Keep a strong reference so LuaJIT does not GC the callback.
+local enum_callback = ffi.cast("int(__stdcall *)(void*, uintptr_t)", function(hwnd, _lParam)
     local currentPid = kernel32.GetCurrentProcessId()
     local windowPid = ffi.new("unsigned long[1]")
     local threadId = user32.GetWindowThreadProcessId(hwnd, windowPid)
-    
+
     -- Only process windows from our process
     if windowPid[0] == currentPid then
-        local windows = ffi.cast("void**", lParam) -- Cast lParam to get our windows table pointer
         local windowInfo = get_window_info(hwnd)
         windowInfo.thread_id = threadId
         windowInfo.process_id = windowPid[0]
-        
-        -- We need to store this somehow - let's use a global table for the callback
+
         if not _G.temp_windows then _G.temp_windows = {} end
         table.insert(_G.temp_windows, windowInfo)
     end
-    
+
     return 1 -- Continue enumeration
 end)
 

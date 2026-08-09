@@ -1,12 +1,12 @@
 ZIG ?= zig
 TARGET := bin/luaapi.asi
 DEBUG_TARGET := bin/luaapi-debug.asi
-SRCS := src/main.c 
+SRCS := src/main.c src/logging.c
 CFLAGS := -Ivendor/luajit/src -DLUAJIT_STATIC
-LDFLAGS := -lc
+LDFLAGS := -lc -lshlwapi -lws2_32
 LUAJIT_LIB := vendor/luajit/src/libluajit.a
 
-.PHONY: all clean install debug format lua
+.PHONY: all clean install debug format lua check
 
 all: $(TARGET)
 
@@ -23,7 +23,7 @@ $(DEBUG_TARGET): $(SRCS) $(LUAJIT_LIB)
 		-femit-bin=$@ $(CFLAGS) $(LDFLAGS) $(SRCS) $(LUAJIT_LIB)
 
 clean:
-	rm -f bin/* $(TARGET) $(DEBUG_TARGET)
+	rm -f $(TARGET) $(DEBUG_TARGET) bin/*.lib
 
 format:
 	clang-format -i src/*
@@ -31,9 +31,10 @@ format:
 lua:
 	cd vendor/luajit &&	make CC="zig cc -target x86-windows-gnu -m32" BUILDMODE=static TARGET_SYS=Windows
 
+check:
+	luajit scripts/lua/check.lua
+
 install: $(TARGET)
 	mkdir -p ~/.wine/drive_c/Guild
 	cp $(TARGET) ~/.wine/drive_c/Guild/
 	cp -r scripts/lua ~/.wine/drive_c/Guild/
-
-

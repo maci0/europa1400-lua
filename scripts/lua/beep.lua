@@ -41,8 +41,7 @@ local BEEP_TYPES = {
     INFORMATION = 0x00000040   -- Information sound
 }
 
--- Timeout for remote thread operations (milliseconds)
-local REMOTE_THREAD_TIMEOUT = 1000
+
 
 --============================================================================
 -- BEEP FUNCTIONS

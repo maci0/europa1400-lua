@@ -3,8 +3,12 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <windows.h>
+
 #include <winsock2.h>
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
 
 typedef struct
 {
@@ -16,9 +20,9 @@ typedef struct
 
 extern logging_context g_logctx;
 
-bool                   init_logging(HMODULE hModule);
-void                   close_logging(void);
-void                   logf(const char *fmt, ...);
-void                   log_winsock_error(const char *prefix, SOCKET s, int error);
+bool init_logging(HMODULE hModule);
+void close_logging(void);
+void hook_logf(const char *fmt, ...);
+void log_winsock_error(const char *prefix, SOCKET s, int error);
 
 #endif // LOGGING_H

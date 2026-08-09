@@ -21,7 +21,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <winsock2.h>
 #include <windows.h>
+
+#include "logging.h"
 
 //============================================================================
 // CONFIGURATION AND CONSTANTS
@@ -220,6 +223,10 @@ static void TrimString(char *str)
     if (!str)
         return;
 
+    size_t len = strlen(str);
+    if (len == 0)
+        return;
+
     // Trim leading whitespace
     char *start = str;
     while (*start && (*start == ' ' || *start == '\t' || *start == '\n' || *start == '\r'))
@@ -227,9 +234,15 @@ static void TrimString(char *str)
         start++;
     }
 
+    if (*start == '\0')
+    {
+        str[0] = '\0';
+        return;
+    }
+
     // Trim trailing whitespace
-    char *end = str + strlen(str) - 1;
-    while (end > str && (*end == ' ' || *end == '\t' || *end == '\n' || *end == '\r'))
+    char *end = start + strlen(start) - 1;
+    while (end > start && (*end == ' ' || *end == '\t' || *end == '\n' || *end == '\r'))
     {
         *end = '\0';
         end--;
@@ -263,12 +276,6 @@ static BOOL HandleBuiltinCommand(const char *command)
             printf("%3d: %s\n", i + 1, g_commandHistory[i]);
         }
         return TRUE;
-    }
-
-    if (strncmp(command, "lua ", 4) == 0)
-    {
-        // Allow explicit lua prefix (for clarity)
-        return FALSE; // Pass the command without prefix to Lua
     }
 
     return FALSE;
@@ -400,8 +407,8 @@ static void RunConsoleLoop(lua_State *L)
  */
 static DWORD WINAPI ConsoleThread(LPVOID param)
 {
+    (void)param;
     lua_State *L = NULL;
-    BOOL       initSuccess = FALSE;
 
     // Allocate console with error checking
     if (!AllocConsole())
@@ -438,6 +445,9 @@ static DWORD WINAPI ConsoleThread(LPVOID param)
     luaL_openlibs(L);
     PrintColored(COLOR_INFO, "%s initialized\n", LUA_VERSION);
 
+    // Initialize file logging (non-fatal if it fails)
+    init_logging(g_hModule);
+
     // Load initialization script
     if (!LoadInitScript(L))
     {
@@ -445,16 +455,16 @@ static DWORD WINAPI ConsoleThread(LPVOID param)
         PrintColored(COLOR_WARNING, "Console will start with limited functionality\n");
         printf("You can still execute Lua commands manually.\n\n");
     }
-    else
-    {
-        initSuccess = TRUE;
-    }
+
+    hook_logf("Lua console initialized, entering main loop");
 
     // Run the main console loop
     RunConsoleLoop(L);
 
 cleanup:
     PrintColored(COLOR_INFO, "Shutting down console...\n");
+    hook_logf("Shutting down console");
+    close_logging();
 
     // Clean up Lua resources
     if (L)
@@ -503,6 +513,7 @@ cleanup:
  */
 BOOL APIENTRY DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved)
 {
+    (void)lpReserved;
     switch (dwReason)
     {
     case DLL_PROCESS_ATTACH: {
