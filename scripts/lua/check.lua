@@ -159,6 +159,18 @@ do
     game.debug_on(true)
 end
 
+-- init.lua last: it binds the globals the console exposes, and a name bound
+-- twice (report the module, then report the function) is invisible until then.
+do
+    local ok, err = pcall(dofile, here .. "/init.lua")
+    check("init.lua runs", ok, err)
+    if ok then
+        check("init.lua binds the report module, not a shadowing alias",
+            type(_G.report) == "table" and type(_G.report.save) == "function", type(_G.report))
+        check("help() runs", pcall(_G.help))
+    end
+end
+
 if failures > 0 then
     io.stderr:write(string.format("\n%d of %d checks failed\n", failures, checks))
     os.exit(1)
