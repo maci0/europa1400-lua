@@ -59,7 +59,6 @@ heap   = require("heap")           -- Heap walker (Toolhelp heaps/blocks)
 auto   = require("auto")           -- Auto discover (string/preset -> func -> sig/probe)
 obj    = require("obj")            -- C++ object helper (thiscall / vtable)
 
--- Load utility modules
 local beep_module = require("beep")
 beep = beep_module.beep                    -- System beep (console thread)
 beep_main = beep_module.beep_main          -- System beep (main process)

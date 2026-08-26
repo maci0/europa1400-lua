@@ -17,7 +17,6 @@ local M = {}
 
 local game = require("gamecalls")
 
-
 local function to_addr(v)
     if type(v) == "number" then return v end
     if type(v) ~= "string" then error("addr must be number or hex string") end
@@ -139,7 +138,6 @@ function M.at(addr)
     return setmetatable({ addr = addr }, Obj)
 end
 
-
 local function call_or_hint(name, ...)
     if not game.get_address(name) then
         error(name .. " not registered; run player.find()/catalog.hunt or game.register first", 2)
@@ -161,11 +159,8 @@ function M.show_dialog(msg, flags) local r=call_or_hint("ShowDialog", msg or "",
 function M.trade_execute(a,b,good,amt) local r=call_or_hint("TradeExecute", a,b,good or 0, amt or 1); print(string.format("trade %s->%s good=%s x%s -> %s", tostring(a), tostring(b), tostring(good), tostring(amt), tostring(r))); return r end
 function M.diplomacy_offer(a,b,offer) local r=call_or_hint("SendDiplomacyOffer", a,b,offer or 0); print(string.format("diplomacy %s->%s offer=%s -> %s", tostring(a), tostring(b), tostring(offer), tostring(r))); return r end
 
-
-
 function M.gold_raw(pid) return call_or_hint("GetPlayerGoldRaw", pid or 0) end
 function M.level(pid) return call_or_hint("GetPlayerLevel", pid or 0) end
 function M.get_name(pid) return call_or_hint("GetPlayerName", pid or 0) end
-
 
 return M

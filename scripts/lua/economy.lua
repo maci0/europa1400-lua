@@ -23,7 +23,6 @@ local M = {}
 
 local game = require("gamecalls")
 
-
 local function call_or_hint(name, ...)
     if not game.get_address(name) then
         error(name .. " not registered; run economy.find() / catalog.hunt('economy') or game.register first", 2)
@@ -171,12 +170,10 @@ function M.set_goldsmith_output(ptr, idx, n) local r=call_or_hint("SetGoldsmithO
 function M.vintner_output(ptr, idx) return call_or_hint("GetVintnerOutput", ptr, idx or 0) end
 function M.set_vintner_output(ptr, idx, n) local r=call_or_hint("SetVintnerOutput", ptr, idx or 0, n or 0); print(string.format("vintner output %s[%s]->%s", tostring(ptr), tostring(idx or 0), tostring(n or 0))); return r end
 
-
 function M.herbgarden_yield(ptr, idx) return call_or_hint("GetHerbGardenYield", ptr, idx or 0) end
 function M.set_herbgarden_yield(ptr, idx, n) local r=call_or_hint("SetHerbGardenYield", ptr, idx or 0, n or 0); print(string.format("herbgarden_yield %s[%s]->%s", tostring(ptr), tostring(idx or 0), tostring(n or 0))); return r end
 function M.tailor_master_output(ptr, idx) return call_or_hint("GetTailorMasterOutput", ptr, idx or 0) end
 function M.set_tailor_master_output(ptr, idx, n) local r=call_or_hint("SetTailorMasterOutput", ptr, idx or 0, n or 0); print(string.format("tailor_master_output %s[%s]->%s", tostring(ptr), tostring(idx or 0), tostring(n or 0))); return r end
-
 
 function M.harvest_yield(ptr, idx) return call_or_hint("GetHarvestYield", ptr, idx or 0) end
 function M.set_harvest_yield(ptr, idx, n) local r=call_or_hint("SetHarvestYield", ptr, idx or 0, n or 0); print(string.format("harvest_yield %s[%s]->%s", tostring(ptr), tostring(idx or 0), tostring(n or 0))); return r end

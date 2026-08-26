@@ -115,8 +115,6 @@ function M.to(target, base, size, max_hits)
     return hits
 end
 
-
-
 -- Find references to an ASCII string (find string then find its pointers)
 function M.string_refs(str, base, size, max_hits)
     if type(str) ~= "string" or str == "" then error("str required") end

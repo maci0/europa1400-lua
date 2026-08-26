@@ -2336,24 +2336,17 @@ function M.university18_level_tax(cityId, v) if v==nil then return delegate("wor
 function M.university19_level_tax(cityId, v) if v==nil then return delegate("world","university19_level_tax", cityId) else return delegate("world","set_university19_level_tax", cityId, v) end end
 function M.university20_level_tax(cityId, v) if v==nil then return delegate("world","university20_level_tax", cityId) else return delegate("world","set_university20_level_tax", cityId, v) end end
 
-
 function M.herbgarden_yield(bldg, gid, v) if v==nil then return delegate("economy","herbgarden_yield", bldg, gid) else return delegate("economy","set_herbgarden_yield", bldg, gid, v) end end
 function M.tailor_master(bldg, gid, v) if v==nil then return delegate("economy","tailor_master_output", bldg, gid) else return delegate("economy","set_tailor_master_output", bldg, gid, v) end end
 
-
-
 function M.production_bonus(building, goodId, v) if v==nil then return delegate("civic","production_bonus", building, goodId) else return delegate("civic","set_production_bonus", building, goodId, v) end end
 function M.inventory_value(building) return delegate("civic","inventory_value", building) end
-
-
 
 function M.season() return delegate("state","season") end
 function M.intrigue_level(a,b,v) if v==nil then return delegate("state","intrigue_level", a,b) else return delegate("state","set_intrigue_level", a,b,v) end end
 function M.office_holder(cityId, office, v) if v==nil then return delegate("state","office_holder", cityId, office) else return delegate("state","set_office_holder", cityId, office, v) end end
 function M.office_term(cityId, office, v) if v==nil then return delegate("state","office_term", cityId, office) else return delegate("state","set_office_term", cityId, office, v) end end
 function M.road_bandit(cityA, cityB, v) if v==nil then return delegate("state","road_bandit_risk", cityA, cityB) else return delegate("state","set_road_bandit_risk", cityA, cityB, v) end end
-
-
 
 function M.election_votes(cityId, cand, v) if v==nil then return delegate("state","election_votes", cityId, cand) else return delegate("state","set_election_votes", cityId, cand, v) end end
 function M.privileges(pid) return delegate("state","privileges", pid) end
@@ -2362,8 +2355,6 @@ function M.office_competition(cityId, office) return delegate("state","office_co
 function M.patrol(cityId, v) if v==nil then return delegate("state","patrol_strength", cityId) else return delegate("state","set_patrol_strength", cityId, v) end end
 function M.kidnap(a, b) return delegate("state","kidnap_chance", a,b) end
 function M.reputation_decay(a,b,v) if v==nil then return delegate("state","reputation_decay", a,b) else return delegate("social","set_reputation_decay", a,b,v) end end
-
-
 
 function M.city_rank(cityId) return delegate("state","city_rank", cityId) end
 function M.city_growth(cityId) return delegate("state","city_growth", cityId) end
@@ -2374,8 +2365,6 @@ function M.watch(cityId, v) if v==nil then return delegate("state","watch_streng
 function M.trial_verdict(trialId, v) if v==nil then return delegate("state","trial_verdict", trialId) else return delegate("civic","set_trial_verdict", trialId, v) end end
 function M.worker_morale(bldg, v) if v==nil then return delegate("state","worker_morale", bldg) else return delegate("civic","set_worker_morale", bldg, v) end end
 
-
-
 function M.dynasty_decay(pid) return delegate("state","dynasty_decay", pid) end
 function M.marriage_partner(pid) return delegate("state","marriage_partner", pid) end
 function M.relation(a,b,v) if v==nil then return delegate("state","relation", a,b) else return delegate("social","set_relation", a,b,v) end end
@@ -2385,15 +2374,11 @@ function M.brawl(cityId) return delegate("state","tavern_brawl", cityId) end
 function M.time_hours(v) if v==nil then return delegate("state","time") else return delegate("world","set_time", v) end end
 function M.year(v) if v==nil then return delegate("state","year") else return delegate("world","set_year", v) end end
 
-
-
 function M.broadcast(eventId, payload, v) if payload==nil then payload="" end; return delegate("state","broadcast_event", eventId, payload) end
 function M.divorce(pid, spouse, v) if spouse==nil then return delegate("state","divorce", pid, spouse) else return delegate("state","divorce", pid, spouse) end end
 function M.warrant(pid, v) if v==nil then return delegate("state","arrest_warrant", pid) else return delegate("state","issue_warrant", pid, v) end end
 function M.spy_network(a, b) return delegate("state","spy_network", a,b) end
 function M.diplomacy(a,b,c,d,e) return delegate("state","diplomacy_offer", a,b,c,d,e) end
-
-
 
 function M.player_health(pid, v) if v==nil then return delegate("state","player_health", pid) else return delegate("state","set_player_health", pid, v) end end
 function M.spy_info(a,b) return delegate("state","spy_info", a,b) end
@@ -2405,7 +2390,6 @@ function M.dead(pid) return delegate("state","is_player_dead", pid) end
 function M.trial(accused, crime, v) if crime==nil and v==nil then return delegate("state","trial_witness", accused) end; return delegate("state","start_trial", accused, crime) end
 function M.trigger(cityId, eventId, v) return delegate("state","trigger_event", eventId or cityId, cityId) end
 
-
 function M.harvest_yield(bldg, gid, v) if v==nil then return delegate("economy","harvest_yield", bldg, gid) else return delegate("economy","set_harvest_yield", bldg, gid, v) end end
 function M.dairy_yield(bldg, gid, v) return delegate("economy","dairy_yield", bldg, gid) end
 function M.fishing_yield(bldg, gid, v) return delegate("economy","fishing_yield", bldg, gid) end
@@ -2414,7 +2398,6 @@ function M.pasture_yield(bldg, gid, v) return delegate("economy","pasture_yield"
 function M.apiary_yield(bldg, gid, v) return delegate("economy","apiary_yield", bldg, gid) end
 function M.orchard_yield(bldg, gid, v) return delegate("economy","orchard_yield", bldg, gid) end
 function M.chandler_yield(bldg, gid, v) return delegate("economy","chandler_yield", bldg, gid) end
-
 
 function M.quarry_yield(bldg, gid, v) return delegate("economy","quarry_yield", bldg, gid) end
 function M.falconer_yield(bldg, gid, v) return delegate("economy","falconer_yield", bldg, gid) end
@@ -2426,7 +2409,6 @@ function M.distiller_yield(bldg, gid, v) return delegate("economy","distiller_yi
 function M.mining_yield(bldg, gid, v) return delegate("economy","mining_yield", bldg, gid) end
 function M.logging_yield(bldg, gid, v) return delegate("economy","logging_yield", bldg, gid) end
 
-
 function M.bounty(pid, v) if v==nil then return delegate("economy","bounty", pid) else return delegate("economy","set_bounty", pid, v) end end
 function M.church_donation(pid, v) if v==nil then return delegate("economy","church_donation", pid) else return delegate("economy","set_church_donation", pid, v) end end
 function M.city_gold(cityId, v) if v==nil then return delegate("economy","city_gold", cityId) else return delegate("economy","set_city_gold", cityId, v) end end
@@ -2435,7 +2417,6 @@ function M.dynasty_cash(pid, v) if v==nil then return delegate("economy","dynast
 function M.family_wealth(pid, v) if v==nil then return delegate("economy","family_wealth", pid) else return delegate("economy","set_family_wealth", pid, v) end end
 function M.production_rate(building, goodId, v) if v==nil then return delegate("economy","production_rate", building, goodId) else return delegate("economy","set_production_rate", building, goodId, v) end end
 function M.worker_wage(building, wageType, v) if v==nil then return delegate("economy","worker_wage", building, wageType) else return delegate("economy","set_worker_wage", building, wageType, v) end end
-
 
 function M.confession_cost(a, b, v) if v==nil then return delegate("economy","confession_cost", a, b) else return delegate("economy","set_confession_cost", a, b, v) end end
 function M.dowry(a, b, v) if v==nil then return delegate("economy","dowry", a, b) else return delegate("economy","set_dowry", a, b, v) end end
@@ -2446,7 +2427,6 @@ function M.guild_promotion_cost(guildId, rank, v) if v==nil then return delegate
 function M.indulgence_cost(a, b, v) if v==nil then return delegate("economy","indulgence_cost", a, b) else return delegate("economy","set_indulgence_cost", a, b, v) end end
 function M.joust_reward(cityId, joustType, v) if v==nil then return delegate("economy","joust_reward", cityId, joustType) else return delegate("economy","set_joust_reward", cityId, joustType, v) end end
 
-
 function M.pilgrimage_cost(a, b, v) return delegate("economy","pilgrimage_cost", a, b) end
 function M.wedding_cost(a, b, v) return delegate("economy","wedding_cost", a, b) end
 function M.relic_value(itemId, v) return delegate("economy","relic_value", itemId) end
@@ -2455,6 +2435,5 @@ function M.trade_reputation(a, b, v) if v==nil then return delegate("economy","t
 function M.city_tax_rate(cityId, goodId, v) return delegate("economy","city_tax_rate", cityId, goodId) end
 function M.favor_debt(a, b, v) if v==nil then return delegate("economy","favor_debt", a, b) else return delegate("economy","set_favor_debt", a, b, v) end end
 function M.ransom(pid, v) if v==nil then return delegate("economy","ransom", pid) else return delegate("economy","set_ransom", pid, v) end end
-
 
 return M

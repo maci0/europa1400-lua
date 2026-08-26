@@ -27,7 +27,6 @@ local M = {}
 
 local game = require("gamecalls")
 
-
 local function call_or_hint(name, ...)
     if not game.get_address(name) then
         error(name .. " not registered; run social.find() / catalog.hunt('guild') or game.register first", 2)

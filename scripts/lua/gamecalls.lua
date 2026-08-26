@@ -6,7 +6,6 @@
 
 local ffi = require('ffi')
 
--- Windows API definitions for process manipulation and memory operations
 ffi.cdef[[
     // Process and thread management
     void* GetCurrentProcess();
@@ -34,10 +33,6 @@ ffi.cdef[[
 
 local kernel32 = ffi.load('kernel32')
 
---============================================================================
--- CONFIGURATION AND STATE
---============================================================================
-
 -- Function registry - stores all registered game functions
 local function_registry = {}
 
@@ -54,13 +49,6 @@ local debug_settings = {
 local call_log = {}
 local memory_log = {}
 
-
-
---============================================================================
--- UTILITY FUNCTIONS
---============================================================================
-
--- Count entries in a table
 local function parse_addr(a)
     if type(a) == "number" then return a end
     if type(a) ~= "string" then return nil end
@@ -88,7 +76,6 @@ local function function_pointer_type(signature)
     return ret .. " (*)" .. args
 end
 
--- Format function parameters for display
 local function format_parameters(...)
     local args = {...}
     local formatted = {}
@@ -114,9 +101,6 @@ local function format_parameters(...)
     return table.concat(formatted, ", ")
 end
 
---============================================================================
--- LOGGING SYSTEM
---============================================================================
 local function log_entry(entry_type, data)
     if not debug_settings.enabled then return end
 
@@ -142,17 +126,8 @@ local function log_entry(entry_type, data)
     end
 end
 
---============================================================================
--- CORE FUNCTIONS
---============================================================================
-
--- Register a game function for calling
--- @param name: Function name (for reference)
--- @param address: Function address from Ghidra (can be hex string or number)  
--- @param signature: FFI function signature, e.g. "int(int, int)"
--- @param description: Optional description
+-- address is a number or a hex string with or without the 0x prefix.
 local function register_function(name, address, signature, description)
-    -- Input validation
     if not name or type(name) ~= "string" or name == "" then
         error("Function name must be a non-empty string")
     end
@@ -171,7 +146,6 @@ local function register_function(name, address, signature, description)
         error(string.format("Address out of valid range: 0x%08X", addr_num))
     end
     
-    -- Check if function already exists
     if function_registry[name] then
         print(string.format("Warning: Overwriting existing function '%s'", name))
     end
@@ -181,7 +155,6 @@ local function register_function(name, address, signature, description)
         error("Failed to create function pointer for '" .. ptr_type .. "': " .. tostring(func_ptr))
     end
     
-    -- Store function information
     function_registry[name] = {
         address = addr_num,
         signature = signature,
@@ -190,7 +163,6 @@ local function register_function(name, address, signature, description)
         registered_time = os.time()
     }
     
-    -- Success message
     print(string.format("Registered function: %s", name))
     print(string.format("  Address: 0x%08X", addr_num))
     print(string.format("  Signature: %s", signature))
@@ -199,9 +171,7 @@ local function register_function(name, address, signature, description)
     end
 end
 
--- Call a registered function directly (in console thread)
--- @param name: Function name
--- @param ...: Function arguments
+-- Runs on the console thread; a bad signature takes the game down with it.
 local function call_function(name, ...)
     local func_info = function_registry[name]
     if not func_info then
@@ -244,10 +214,9 @@ local function call_function(name, ...)
     return result
 end
 
--- Call a registered function in the main game process (new thread)
--- Note: This works best with simple functions that take basic parameters
--- @param name: Function name
--- @param param: Single parameter to pass (limitations of CreateRemoteThread)
+-- Runs the function on its own thread in the game. CreateRemoteThread passes a
+-- single pointer-sized argument, so this only reaches one-argument functions,
+-- and it reports thread success rather than the return value.
 local function call_function_main(name, param)
     local func_info = function_registry[name]
     if not func_info then
@@ -271,7 +240,6 @@ local function call_function_main(name, param)
     local hProcess = kernel32.GetCurrentProcess()
     local start_time = os.clock()
     
-    -- Create remote thread to execute the function
     local hThread = kernel32.CreateRemoteThread(
         hProcess,
         nil,
@@ -312,7 +280,6 @@ local function call_function_main(name, param)
     return success
 end
 
--- List all registered functions
 local function list_functions()
     print("Registered game functions:")
     print("=" .. string.rep("=", 50))
@@ -331,10 +298,7 @@ local function list_functions()
     end
 end
 
--- Read memory at a specific address
--- @param address: Memory address (number or hex string with optional 0x)
--- @param size: Number of bytes to read
--- @param type: FFI type (e.g., "int", "char", "float")
+-- Returns a typed buffer and the byte count, or nil and 0 if the read failed.
 local function read_memory(address, size, ffi_type)
     local addr_num = parse_addr(address)
     if not addr_num or type(size) ~= "number" or type(ffi_type) ~= "string" then
@@ -380,10 +344,6 @@ local function read_memory(address, size, ffi_type)
     end
 end
 
--- Write memory at a specific address
--- @param address: Memory address (number or hex string)
--- @param data: Data to write (FFI array or single value)
--- @param size: Number of bytes to write
 local function write_memory(address, data, size)
     local addr_num = parse_addr(address)
     if not addr_num or type(size) ~= "number" or size <= 0 then
@@ -420,7 +380,6 @@ local function write_memory(address, data, size)
     return success ~= 0, bytes_written[0]
 end
 
--- Helper function to get module base address
 local function get_module_base(module_name)
     local hModule = kernel32.GetModuleHandleA(module_name)
     if hModule ~= nil then
@@ -429,8 +388,8 @@ local function get_module_base(module_name)
     return nil
 end
 
--- Save function registrations to file
--- @param filename: File to save to (default: "functions_save.lua")
+-- Writes a re-runnable Lua file that registers everything back through
+-- require("gamecalls"), so a reload lands in this same registry.
 local function save_functions(filename)
     filename = filename or "lua/functions_save.lua"
 
@@ -456,8 +415,6 @@ local function save_functions(filename)
                        table_count(function_registry), filename))
 end
 
--- Load function registrations from file
--- @param filename: File to load from
 local function load_functions(filename)
     filename = filename or "lua/functions_save.lua"
 
@@ -477,7 +434,6 @@ local function load_functions(filename)
         table_count(function_registry) - before, filename))
 end
 
--- Debug and logging management functions
 local function debug_enable(enabled)
     debug_settings.enabled = enabled ~= false
     print("Debug logging: " .. (debug_settings.enabled and "ENABLED" or "DISABLED"))
@@ -547,16 +503,13 @@ local function clear_logs()
     print("All logs cleared")
 end
 
-
-
--- Registry accessors (for pointer/xref workflows that need raw addresses)
+-- Raw addresses, for the pointer and xref workflows.
 local function get_address(name)
     local e = function_registry[name]
     return e and e.address or nil
 end
 local function get_registry() return function_registry end
 
--- Export the API
 return {
     -- Core functions
     register = register_function,

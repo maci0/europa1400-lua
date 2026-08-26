@@ -30,7 +30,6 @@ M.offsets = {
     name_len   = 32,
 }
 
-
 local function to_addr(v)
     if type(v) == "number" then return v end
     if type(v) ~= "string" then error("addr must be number or hex string") end
@@ -138,7 +137,6 @@ function Obj:dump()
     return self
 end
 
-
 local function call_world(name, ...)
     local w = require("world")
     if w and w[name] then
@@ -185,11 +183,9 @@ function M.at(addr)
     return setmetatable({ addr = addr }, Obj)
 end
 
-
 function M.gold_via_call(cityId) return call_world("GetCityGold", cityId) end
 function M.set_gold_via_call(cityId, v) local w=require("world"); if w and w.set_city_gold then return w.set_city_gold(cityId,v) end; return call_world("SetCityGold", cityId, v) end
 function M.happiness_via_call(cityId) return call_world("GetCityHappiness", cityId) end
 function M.set_happiness_via_call(cityId, v) local w=require("world"); if w and w.set_city_happiness then return w.set_city_happiness(cityId,v) end; return call_world("SetCityHappiness", cityId, v) end
-
 
 return M

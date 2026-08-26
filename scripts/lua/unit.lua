@@ -31,7 +31,6 @@ M.offsets = {
     name_len  = 32,
 }
 
-
 local function to_addr(v)
     if type(v) == "number" then return v end
     if type(v) ~= "string" then error("addr must be number or hex string") end
@@ -206,7 +205,6 @@ function Obj:dump()
     return self
 end
 
-
 local function call_or_hint(name, ...)
     if not game.get_address(name) then
         error(name .. " not registered; run unit.find()/catalog.hunt or game.register first", 2)
@@ -243,7 +241,6 @@ function M.family_count(pid) return call_or_hint("GetFamilyMemberCount", pid) en
 function M.servant_count(pid) return call_or_hint("GetServantCount", pid) end
 function M.assassin_level(pid) return call_or_hint("GetAssassinLevel", pid) end
 function M.set_assassin_level(pid, lvl) local r=call_or_hint("SetAssassinLevel", pid, lvl); print(string.format("assassin pid=%s->%s", tostring(pid), tostring(lvl))); return r end
-
 
 function Obj:health_via_call() return call_or_hint("GetUnitHealth", self.addr) end
 function Obj:set_health_via_call(v) local r=call_or_hint("SetUnitHealth", self.addr, v); print(string.format("unit 0x%08X health->%s", self.addr, tostring(v))); return r end

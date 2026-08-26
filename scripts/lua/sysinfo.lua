@@ -61,19 +61,8 @@ ffi.cdef[[
     } MEMORYSTATUSEX;
 ]]
 
--- Load Windows system DLLs
 local user32 = ffi.load('user32')
 local kernel32 = ffi.load('kernel32')
-
---============================================================================
--- CONSTANTS
---============================================================================
-
-
-
---============================================================================
--- UTILITY FUNCTIONS
---============================================================================
 
 -- Format bytes in human-readable units
 local function format_bytes(bytes)
@@ -88,14 +77,9 @@ local function format_bytes(bytes)
     end
 end
 
--- Create a separator line
 local function separator(length, char)
     return (char or "="):rep(length or 50)
 end
-
---============================================================================
--- DIAGNOSTIC FUNCTIONS  
---============================================================================
 
 -- Show thread information
 local function show_thread_info()
@@ -347,7 +331,6 @@ local function show_memory_layout()
     return modules
 end
 
--- Export functions
 return {
     thread_info = show_thread_info,
     info = show_system_info,

@@ -27,7 +27,6 @@ local function call_or_hint(name, ...)
     error(tostring(ret), 0)
 end
 
-
 M.offsets = {
     level       = 0,
     owner       = 4,
@@ -45,7 +44,6 @@ M.offsets = {
     name        = 52,
     name_len    = 32,
 }
-
 
 local function to_addr(v)
     if type(v) == "number" then return v end
@@ -1042,7 +1040,6 @@ function M.btype(ptr) return call_or_hint("GetBuildingType", ptr) end
 function M.upgrade(ptr) local r=call_or_hint("UpgradeBuilding", ptr); print(string.format("upgrade %s -> %s", tostring(ptr), tostring(r))); return r end
 function M.downgrade(ptr) local r=call_or_hint("DowngradeBuilding", ptr); print(string.format("downgrade %s -> %s", tostring(ptr), tostring(r))); return r end
 function M.create(btype, x, y) local r=call_or_hint("CreateBuilding", btype, x, y); print(string.format("create btype=%s @%s,%s -> %s", tostring(btype), tostring(x), tostring(y), tostring(r))); return r end
-
 
 -- per-building aliases (curry self.addr so snapshot-building flow needs one less arg)
 function Obj:trade_reputation(otherCity) return call_or_hint("GetTradeReputation", self.addr, otherCity or 0) end

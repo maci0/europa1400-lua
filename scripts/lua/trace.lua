@@ -24,7 +24,6 @@ M.enabled = nil          -- nil = trace all, or set {["Fn"]=true}
 M._orig_call = nil
 M._hooked = false
 
-
 local function should_trace(name)
     if M.enabled == nil then return true end
     return M.enabled[name] == true

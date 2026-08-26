@@ -15,7 +15,6 @@ local M = {}
 
 local game = require("gamecalls")
 
-
 local function call_or_hint(name, ...)
     if not game.get_address(name) then
         error(name .. " not registered; run state.find() / catalog.hunt('save') or game.register first", 2)
@@ -78,7 +77,6 @@ function M.unpause() return M.pause(0) end
 function M.is_paused() return call_or_hint("IsGamePaused") end
 function M.get() return call_or_hint("GetGameState") end
 
-
 -- city/world state surfaced via state.* so catalog.hunt("state") triage works from one door
 function M.city_owner(cityId) return call_or_hint("GetCityOwner", cityId) end
 function M.wall_health(cityId) return call_or_hint("GetCityWallHealth", cityId) end
@@ -93,7 +91,6 @@ function M.ai_behavior(pid) return call_or_hint("GetAIBehavior", pid) end
 function M.aggressiveness(pid) return call_or_hint("GetAggressiveness", pid) end
 function M.dynasty_members(pid) return call_or_hint("GetDynastyMembers", pid) end
 function M.dynasty_name(pid) return call_or_hint("GetDynastyName", pid) end
-
 
 function M.guard_count(pid_or_city) return call_or_hint("GetGuardCount", pid_or_city or 0) end
 function M.guard_morale(pid_or_city) return call_or_hint("GetGuardMorale", pid_or_city or 0) end
@@ -132,7 +129,6 @@ function M.plague(cityId) return call_or_hint("GetPlagueState", cityId or 0) end
 function M.public_order(cityId) return call_or_hint("GetPublicOrder", cityId or 0) end
 function M.reputation_decay(a,b) return call_or_hint("GetReputationDecay", a,b) end
 
-
 function M.season() return call_or_hint("GetSeason") end
 function M.intrigue_level(a,b) return call_or_hint("GetIntrigueLevel", a or 0, b or 0) end
 function M.set_intrigue_level(a,b,v) local r=call_or_hint("SetIntrigueLevel", a or 0, b or 0, v or 0); print(string.format("intrigue %s->%s=%s", tostring(a), tostring(b), tostring(v))); return r end
@@ -143,8 +139,6 @@ function M.set_office_term(cityId, office, term) local r=call_or_hint("SetOffice
 function M.road_bandit_risk(cityA, cityB) return call_or_hint("GetRoadBanditRisk", cityA or 0, cityB or 0) end
 function M.set_road_bandit_risk(cityA, cityB, risk) local r=call_or_hint("SetRoadBanditRisk", cityA or 0, cityB or 0, risk or 0); print(string.format("bandit risk %s->%s=%s", tostring(cityA), tostring(cityB), tostring(risk))); return r end
 
-
-
 function M.election_votes(cityId, cand) return call_or_hint("GetElectionVotes", cityId or 0, cand or 0) end
 function M.set_election_votes(cityId, cand, v) local r=call_or_hint("SetElectionVotes", cityId or 0, cand or 0, v or 0); print(string.format("election city=%s cand=%s->%s", tostring(cityId), tostring(cand), tostring(v))); return r end
 function M.privileges(pid) return call_or_hint("GetPrivileges", pid or 0) end
@@ -154,7 +148,6 @@ function M.patrol_strength(cityId) return call_or_hint("GetPatrolStrength", city
 function M.set_patrol_strength(cityId, v) local r=call_or_hint("SetPatrolStrength", cityId or 0, v or 0); print(string.format("patrol city=%s->%s", tostring(cityId), tostring(v))); return r end
 function M.kidnap_chance(a,b) return call_or_hint("GetKidnapChance", a or 0, b or 0) end
 function M.reputation_decay(a,b) return call_or_hint("GetReputationDecay", a or 0, b or 0) end
-
 
 function M.city_rank(cityId) return call_or_hint("GetCityRank", cityId or 0) end
 function M.city_growth(cityId) return call_or_hint("GetCityGrowthRate", cityId or 0) end
@@ -177,15 +170,12 @@ function M.tavern_brawl(cityId) return call_or_hint("GetTavernBrawlChance", city
 function M.time() return call_or_hint("GetTimeHours") end
 function M.year() return call_or_hint("GetYear") end
 
-
 function M.broadcast_event(eventId, payload) local r=call_or_hint("BroadcastEvent", eventId or 0, payload or ""); print(string.format("broadcast event=%s payload=%q -> %s", tostring(eventId), tostring(payload), tostring(r))); return r end
 function M.divorce(pid, spouse) local r=call_or_hint("Divorce", pid or 0, spouse or 0); print(string.format("divorce pid=%s spouse=%s -> %s", tostring(pid), tostring(spouse), tostring(r))); return r end
 function M.arrest_warrant(pid) return call_or_hint("GetArrestWarrant", pid or 0) end
 function M.issue_warrant(issuer, target) local r=call_or_hint("IssueArrestWarrant", issuer or 0, target or 0); print(string.format("warrant %s->%s -> %s", tostring(issuer), tostring(target), tostring(r))); return r end
 function M.spy_network(a,b) return call_or_hint("GetSpyNetwork", a or 0, b or 0) end
 function M.diplomacy_offer(a,b,c,d,e) return call_or_hint("SendDiplomacyOffer", a or 0, b or 0, c or 0, d or 0, e or 0) end
-
-
 
 function M.player_health(pid) return call_or_hint("GetPlayerHealth", pid or 0) end
 function M.set_player_health(pid, v) local r=call_or_hint("SetPlayerHealth", pid or 0, v or 0); print(string.format("player health pid=%s->%s", tostring(pid), tostring(v))); return r end
@@ -197,6 +187,5 @@ function M.is_office_vacant(cityId, office) return call_or_hint("IsOfficeVacant"
 function M.is_player_dead(pid) return call_or_hint("IsPlayerDead", pid or 0) end
 function M.start_trial(accused, crime) local r=call_or_hint("StartTrial", accused or 0, crime or 0); print(string.format("start trial accused=%s crime=%s -> %s", tostring(accused), tostring(crime), tostring(r))); return r end
 function M.trigger_event(eventId, cityId) local r=call_or_hint("TriggerEvent", eventId or 0, cityId or 0); print(string.format("trigger event=%s city=%s -> %s", tostring(eventId), tostring(cityId), tostring(r))); return r end
-
 
 return M

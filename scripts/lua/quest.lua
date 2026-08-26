@@ -14,7 +14,6 @@ local M = {}
 
 local game = require("gamecalls")
 
-
 local function call_or_hint(name, ...)
     if not game.get_address(name) then
         error(name .. " not registered; run quest.find() / catalog.hunt('quest') or game.register first", 2)

@@ -19,7 +19,6 @@ local M = {}
 
 local game = require("gamecalls")
 
-
 local function call_or_hint(name, ...)
     if not game.get_address(name) then
         error(name .. " not registered; run civic.find() / catalog.hunt + game.register first", 2)
@@ -106,7 +105,6 @@ function M.witnesses(trialId) return call_or_hint("GetTrialWitnessCount", trialI
 function M.worker_wage(building, wtype) return call_or_hint("GetWorkerWage", building, wtype) end
 function M.set_worker_wage(building, wtype, v) local r=call_or_hint("SetWorkerWage", building, wtype, v); print(string.format("wage 0x%08X type=%s -> %s", building, tostring(wtype), tostring(v))); return r end
 
-
 function M.witness_count(trialId) return call_or_hint("GetTrialWitnessCount", trialId) end
 function M.evidence_count(trialId) return call_or_hint("GetEvidenceCount", trialId) end
 function M.trial_verdict(trialId) return call_or_hint("GetTrialVerdict", trialId) end
@@ -118,11 +116,8 @@ function M.crime_type(pid)
     return id
 end
 
-
-
 function M.production_bonus(building, goodId) return call_or_hint("GetProductionBonus", building, goodId) end
 function M.set_production_bonus(building, goodId, bonus) local r=call_or_hint("SetProductionBonus", building, goodId, bonus); print(string.format("production bonus 0x%08X good=%s -> %s", building, tostring(goodId), tostring(bonus))); return r end
 function M.inventory_value(building) local iv=require("inventory"); if iv and iv.value then return iv.value(building) end; return call_or_hint("GetInventoryValue", building) end
-
 
 return M

@@ -30,7 +30,6 @@ M.offsets = {
     max_items = 32,   -- slots to scan for list/count_for
 }
 
-
 local function to_addr(v)
     if type(v) == "number" then return v end
     if type(v) ~= "string" then error("addr must be number or hex string") end
@@ -115,7 +114,6 @@ function M.transfer(src, dst, goodId, amount)
     end
     error("TransferGoods not registered; register via catalog or game.register first")
 end
-
 
 local function call_or_hint(name, ...)
     if not game.get_address(name) then

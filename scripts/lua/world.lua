@@ -23,7 +23,6 @@ local M = {}
 
 local game = require("gamecalls")
 
-
 local function call_or_hint(name, ...)
     if not game.get_address(name) then
         error(name .. " not registered; run world.find() / catalog.hunt('world') or game.register first", 2)
@@ -3886,7 +3885,6 @@ function M.hospital_tax(cityId) return call_or_hint("GetHospitalTaxRate", cityId
 function M.set_hospital_tax(cityId, v) local r=call_or_hint("SetHospitalTaxRate", cityId, v); print(string.format("hospital tax city=%s -> %s", tostring(cityId), tostring(v))); return r end
 
 function M.set_granary_tax(cityId, v) local r=call_or_hint("SetGranaryTaxRate", cityId, v); print(string.format("granary tax city=%s -> %s", tostring(cityId), tostring(v))); return r end
-
 
 function M.set_robber_camp2(cityId, v) local r=call_or_hint("SetRobberCampLevel2", cityId, v); print(string.format("robber camp2 city=%s -> %s", tostring(cityId), tostring(v))); return r end
 

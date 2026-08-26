@@ -15,7 +15,6 @@ local M = {}
 
 local game = require("gamecalls")
 
-
 function M.discover(keyword, base, size, opts)
     opts = opts or {}
     base = base or 0x00400000
