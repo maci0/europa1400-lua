@@ -57,11 +57,9 @@ function M.discover(keyword, base, size, opts)
             local ok, res = pcall(probe.at, a, sigs)
             if ok then probed = res end
         end
-        if opts.register and type(opts.register) == "string" then
-            if game then
-                local name = string.format("%s_auto_%d", tostring(keyword), i)
-                pcall(game.register, name, a, opts.register, "auto " .. tostring(keyword))
-            end
+        if type(opts.register) == "string" then
+            local name = string.format("%s_auto_%d", tostring(keyword), i)
+            pcall(game.register, name, a, opts.register, "auto " .. tostring(keyword))
         end
         results[#results+1] = { addr = a, sig_pat = pat, probe = probed }
         if opts.limit and i >= opts.limit then break end
@@ -77,7 +75,7 @@ function M.quick(addr, sigs, name)
         local ok = false
         for _, r in ipairs(res or {}) do
             if r.ok then
-                    if game then pcall(game.register, name, addr, r.sig, "auto quick") end
+                    pcall(game.register, name, addr, r.sig, "auto quick")
                 ok = true; break
             end
         end
@@ -99,7 +97,7 @@ function M.from_string(name, needle, base, size, sig)
             if r.ok then sig = r.sig; break end
         end
     end
-    if game then game.register(name, addr, sig, "auto from_string " .. tostring(needle)) end
+    game.register(name, addr, sig, "auto from_string " .. tostring(needle))
     return addr, sig
 end
 
