@@ -21,9 +21,13 @@ local COMMON_SIGS = {
     "int __stdcall(int)", "void __stdcall(int)",
 }
 
+local game = require("gamecalls")
+
 local function try_one(addr, sig, args)
     args = args or {}
-    local ok, fn = pcall(function() return ffi.cast(sig .. "*", addr) end)
+    local ptr_type, sig_err = game.pointer_type(sig)
+    if not ptr_type then return { sig=sig, args=args, ok=false, err="bad sig: " .. sig_err } end
+    local ok, fn = pcall(ffi.cast, ptr_type, addr)
     if not ok then return { sig=sig, args=args, ok=false, err="bad sig: " .. tostring(fn) } end
     local t0 = os.clock()
     local ok2, res = pcall(function() return fn(unpack(args)) end)

@@ -15,6 +15,8 @@
 
 local M = {}
 
+local struct = require("struct")
+
 local function size_of(ctype)
     local ok, sz = pcall(require("ffi").sizeof, ctype)
     if ok then return sz end
@@ -94,8 +96,8 @@ function M.struct(name, fields, opts)
     if opts.exec then
         local fn, err = load(cdef)
         if fn then pcall(fn) end
-        if _G.struct and _G.struct.register then
-            _G.struct.register(name, out)
+        if struct and struct.register then
+            struct.register(name, out)
         end
     end
     local s = table.concat(lines, "")

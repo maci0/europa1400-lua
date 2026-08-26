@@ -16,6 +16,11 @@
 
 local M = {}
 
+local game = require("gamecalls")
+local struct = require("struct")
+local patch = require("patch")
+local hook = require("hook")
+
 local DEFAULT_PATH = "lua/re_session.lua"
 
 local function esc(s) return (tostring(s):gsub("\\","\\\\"):gsub('"','\\"'):gsub("\n","\\n")) end
@@ -24,8 +29,7 @@ local function esc(s) return (tostring(s):gsub("\\","\\\\"):gsub('"','\\"'):gsub
 function M.collect()
     local st = { meta = { date = os.date("%Y-%m-%d %H:%M:%S") } }
     -- game registry
-    local game = _G.game
-    if game and game.get_registry then
+    if game.get_registry then
         local reg = game.get_registry()
         st.game = {}
         for name, info in pairs(reg or {}) do
@@ -37,18 +41,6 @@ function M.collect()
             }
         end
         table.sort(st.game, function(a,b) return a.name < b.name end)
-    end
-    -- structs
-    local struct = _G.struct
-    if struct and struct.list then
-        -- list() prints; we grab the registry via internal if exposed
-        -- fallback: try _G.struct private
-        local ok, reg = pcall(function() return struct.list and nil end)
-        -- struct.lua keeps registry local, so we snapshot via list side-effect;
-        -- we also try to read it via debug if available
-        st.structs = {}
-        -- best-effort: if struct exposes _registry (it doesn't), handle it
-        -- otherwise leave empty; user can re-register via presets
     end
     -- notes
     st.notes = M._notes or {}
@@ -131,12 +123,10 @@ function M.status()
         print(string.format("    [%d] %s  %s", i, n.t, n.text))
     end
     -- patches / hooks status if available
-    local patch = _G.patch
-    if patch and patch.list then
+    if patch.list then
         print("  patches    : (see patch.list())")
     end
-    local hook = _G.hook
-    if hook and hook.backups then
+    if hook.backups then
         local n = 0; for _ in pairs(hook.backups() or {}) do n=n+1 end
         print(string.format("  iat hooks  : %d", n))
     end

@@ -68,7 +68,7 @@ Not done yet, and worth knowing before you start:
   and tags, all `status="candidate"`; exactly one carries an AOB pattern and none carries a
   resolved address. It is a naming and search aid, not a list of reversed functions.
   `catalog.register_all()` therefore registers nothing until you fill addresses in.
-- **The game-domain helpers are a scaffold over that catalog.** `player.gold()`,
+- **The game-domain helpers are a scaffold over that catalog.** `player.at(addr):gold()`,
   `city.at()`, `cheat.*` and friends call catalog names through `game.call`, so until you
   have found and registered the real function they error with a hint pointing at the
   discovery step. They are shaped for the game; they are not evidence it works.

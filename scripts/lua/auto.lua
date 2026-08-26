@@ -59,7 +59,6 @@ function M.discover(keyword, base, size, opts)
             if ok then probed = res end
         end
         if opts.register and type(opts.register) == "string" then
-            local game = game
             if game then
                 local name = string.format("%s_auto_%d", tostring(keyword), i)
                 pcall(game.register, name, a, opts.register, "auto " .. tostring(keyword))
@@ -79,8 +78,7 @@ function M.quick(addr, sigs, name)
         local ok = false
         for _, r in ipairs(res or {}) do
             if r.ok then
-                local game = game
-                if game then pcall(game.register, name, addr, r.sig, "auto quick") end
+                    if game then pcall(game.register, name, addr, r.sig, "auto quick") end
                 ok = true; break
             end
         end
@@ -102,7 +100,6 @@ function M.from_string(name, needle, base, size, sig)
             if r.ok then sig = r.sig; break end
         end
     end
-    local game = game
     if game then game.register(name, addr, sig, "auto from_string " .. tostring(needle)) end
     return addr, sig
 end

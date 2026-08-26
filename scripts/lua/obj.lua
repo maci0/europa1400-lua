@@ -61,6 +61,8 @@ end
 
 local M = {}
 
+local game = require("gamecalls")
+
 local Obj = {}
 Obj.__index = Obj
 
@@ -82,14 +84,16 @@ function Obj:vcall(idx, sig, args)
     args = args or {}
     if type(sig) ~= "string" then error("sig must be string") end
     local fn_addr = self:vfunc(idx)
-    local ok, fn = pcall(function() return ffi.cast(sig .. "*", fn_addr) end)
-    if not ok then error("bad sig " .. sig .. ": " .. tostring(fn)) end
-    -- thiscall on x86 MSVC passes `this` in ECX; LuaJIT FFI `__thiscall` needed
-    -- if sig doesn't already specify convention, try as-is then __thiscall
-    local this_sig = sig:find("__thiscall") and sig or sig:gsub("%(", " __thiscall(" , 1)
-    local fn2
-    local ok2 = pcall(function() fn2 = ffi.cast(this_sig .. "*", fn_addr) end)
-    local use = (ok2 and fn2) and fn2 or fn
+    -- x86 MSVC passes `this` in ECX, so prefer a __thiscall cast and fall back
+    -- to the signature as written.
+    local this_sig = sig:find("__thiscall") and sig or sig:gsub("%(", " __thiscall(", 1)
+    local ok2, fn2 = pcall(ffi.cast, assert(game.pointer_type(this_sig)), fn_addr)
+    local use = fn2
+    if not ok2 then
+        local ok, fn = pcall(ffi.cast, assert(game.pointer_type(sig)), fn_addr)
+        if not ok then error("bad sig " .. sig .. ": " .. tostring(fn)) end
+        use = fn
+    end
     local t0 = os.clock()
     local ok3, res = pcall(function() return use(self.addr, unpack(args)) end)
     local ms = (os.clock() - t0) * 1000
@@ -100,7 +104,9 @@ end
 
 function Obj:call(addr, sig, args)
     addr = to_addr(addr); sig = sig or "int(void*)"; args = args or {}
-    local ok, fn = pcall(function() return ffi.cast(sig .. "*", addr) end)
+    local ptr_type, sig_err = game.pointer_type(sig)
+    if not ptr_type then error("bad sig " .. sig .. ": " .. sig_err) end
+    local ok, fn = pcall(ffi.cast, ptr_type, addr)
     if not ok then error("bad sig " .. sig .. ": " .. tostring(fn)) end
     local t0 = os.clock()
     local ok2, res = pcall(function() return fn(self.addr, unpack(args)) end)

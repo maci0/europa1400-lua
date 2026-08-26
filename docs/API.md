@@ -9,6 +9,7 @@ Complete reference for all available functions and their usage.
 | `game.register(name, addr, sig, desc)` | Register game function | `game.register("GetGold", 0x403000, "int()", "Get gold")` |
 | `game.call(name, ...)` | Call registered function | `game.call("GetGold")` |
 | `game.get_address(name)` | Get address of registered function | `game.get_address("GetGold")` |
+| `game.pointer_type(sig)` | Turn `"int(int)"` into the `ffi.cast` type `"int (*)(int)"`, or nil plus a reason | `ffi.cast(game.pointer_type("int()"), addr)` |
 | `game.get_registry()` | Get raw registry table | `game.get_registry()` |
 | `game.list()` | List all registered functions | `game.list()` |
 | `game.save([filename])` | Save functions to file | `game.save("my_funcs.lua")` |

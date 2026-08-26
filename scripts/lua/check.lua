@@ -106,6 +106,16 @@ do
     game.debug_on(true)
 end
 
+-- probe, obj and fuzz built cast types the same broken way game.register did.
+do
+    local game = require("gamecalls")
+    check("pointer_type builds a function pointer",
+        game.pointer_type("int(int, int)") == "int (*)(int, int)", game.pointer_type("int(int, int)"))
+    check("pointer_type keeps the calling convention",
+        game.pointer_type("int __stdcall(int)") == "int __stdcall (*)(int)")
+    check("pointer_type rejects a bare type", game.pointer_type("int") == nil)
+end
+
 -- cheat.* names per-object fields (a building's accident chance) that live on
 -- the object <mod>.at(addr) returns, not on the module table. Reaching the
 -- registration hint proves delegate() routed through .at() instead of raising

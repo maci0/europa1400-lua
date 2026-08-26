@@ -564,6 +564,7 @@ return {
     call_main = call_function_main,
     list = list_functions,
     get_address = get_address,
+    pointer_type = function_pointer_type,
     get_registry = get_registry,
     read_mem = read_memory,
     write_mem = write_memory,

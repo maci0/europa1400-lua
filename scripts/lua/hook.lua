@@ -168,7 +168,7 @@ function M.stub(name, signature)
     -- generic stub: log and return 0; user can replace with real logic
     -- We cannot create a true Lua callback as imported function without
     -- knowing signature; this is a placeholder that prints and returns 0.
-    -- For real hooks, provide your own ffi.cast(signature.."*", addr)
+    -- For real hooks, cast the target yourself: ffi.cast(game.pointer_type(sig), addr)
     print(string.format("hook.stub: create your own stub via ffi.cast('%s*', addr) for %s", signature, name))
     return nil
 end

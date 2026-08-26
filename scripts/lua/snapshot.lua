@@ -14,6 +14,13 @@
 
 local M = {}
 
+local game = require("gamecalls")
+local economy = require("economy")
+local world = require("world")
+local civic = require("civic")
+local unit = require("unit")
+local building = require("building")
+
 local function try(fn, ...)
     local ok, r = pcall(fn, ...)
     if ok then return r end
@@ -28,7 +35,7 @@ function M.capture()
     local q = require("quest")
     local so = require("social")
     local st = require("state")
-    local g = _G.game
+    local g = game
 
     if w then
         s.time = try(w.time); s.year = try(w.year); s.season = try(w.season)
@@ -79,7 +86,7 @@ function M.capture()
         s.sample_morale = try(cv.morale, 0)
         s.sample_crime = try(cv.crime, 0)
         s.sample_votes = try(cv.votes, 0, 0)
-        s.sample_bribe = try(_G.economy and _G.economy.bribe_price, 0, 1)
+        s.sample_bribe = try(economy and economy.bribe_price, 0, 1)
     end
     if so then
         s.sample_intrigue = try(so.intrigue, 0, 1)
@@ -93,7 +100,7 @@ function M.capture()
         do
             local fn
             if so and so.bribe_cost then fn = function() return so.bribe_cost(0,1) end
-            elseif _G.world and _G.world.office_bribe_cost then fn = function() return _G.world.office_bribe_cost(0,1) end
+            elseif world and world.office_bribe_cost then fn = function() return world.office_bribe_cost(0,1) end
             end
             if fn then s.sample_bribe_cost = try(fn) end
         end
@@ -114,23 +121,23 @@ function M.capture()
             -- dynasty rep etc: extended-only to avoid noise
             s.sample_dynasty_rep = try(so.dynasty_reputation, 0)
             s.sample_family_wealth = try(so.family_wealth, 0)
-            s.sample_building_tax = try(_G.civic and _G.civic.building_tax, _G._sample_building or 0)
-            s.sample_worker_skill = try(_G.civic and _G.civic.worker_skill, 0, 0)
+            s.sample_building_tax = try(civic and civic.building_tax, _G._sample_building or 0)
+            s.sample_worker_skill = try(civic and civic.worker_skill, 0, 0)
             -- 245-batch: court/assassin/warrant/verdict, 253-batch: poison/drunk/title_tier/evidence
             s.sample_court_level = try(so.court_influence_level, 0, 1)
             s.sample_assassin = try(so.assassin_level, 0)
             s.sample_warrant = try(so.arrest_warrant, 0)
-            s.sample_verdict = try(_G.civic and _G.civic.trial_verdict, 0)
+            s.sample_verdict = try(civic and civic.trial_verdict, 0)
             s.sample_poison = try(so.poison, 0)
             s.sample_drunk = try(so.drunk, 0)
             s.sample_title_tier = try(so.title_tier, 0)
             s.sample_evidence = try(so.evidence, 0)
             s.sample_jail_time = try(so.jail_time, 0)
             s.sample_public_order = try(so.public_order, 0) or try(w and w.public_order, 0)
-            s.sample_harvest = try(_G.civic and _G.civic.harvest_yield, _G._sample_building or 0, 0)
+            s.sample_harvest = try(civic and civic.harvest_yield, _G._sample_building or 0, 0)
             -- economy yield family
             if _G._snapshot_extended then
-                local ey=_G.economy
+                local ey=economy
                 if ey then
                     local b=_G._sample_building or 0
                     if ey.dairy_yield then s.sample_dairy_yield2 = try(ey.dairy_yield, b, 0) end
@@ -172,8 +179,8 @@ function M.capture()
             end
             if w and w.militia then s.sample_militia = try(w.militia, 0) end
             if w and w.wall_health then s.sample_wall = try(w.wall_health, 0) end
-            if _G.civic and _G.civic.witnesses then s.sample_witnesses = try(_G.civic.witnesses, 0) end
-            if _G.civic and _G.civic.worker_wage then s.sample_wage = try(_G.civic.worker_wage, _G._sample_building or 0, 0) end
+            if civic and civic.witnesses then s.sample_witnesses = try(civic.witnesses, 0) end
+            if civic and civic.worker_wage then s.sample_wage = try(civic.worker_wage, _G._sample_building or 0, 0) end
             if so and so.spy_network then s.sample_spy_network = try(so.spy_network, 0, 0) end
             if so and so.age then s.sample_age = try(so.age, 0) end
             if so and so.heir then s.sample_heir = try(so.heir, 0) end
@@ -192,7 +199,7 @@ function M.capture()
             if so and so.favor_debt then s.sample_favor_debt = try(so.favor_debt, 0, 0) end
             if so and so.ambassador then s.sample_ambassador = try(so.ambassador, 0) end
             if w and w.festival then s.sample_festival = try(w.festival, 0) end
-            if _G.unit or _G.building then
+            if unit or building then
                 local ub = _G._sample_unit
                 local ul = require("unit")
                 if ub and ul then
@@ -260,7 +267,7 @@ function M.capture()
             if so and so.wedding then s.sample_wedding = try(so.wedding, 0, 0) end
             if so and so.patrician then s.sample_patrician = try(so.patrician, 0, 0) end
             if w and w.market_fee then s.sample_market_fee = try(w.market_fee, 0) end
-            if _G.economy and _G.economy.guild_levy then s.sample_guild_levy = try(_G.economy.guild_levy, 0, 0) end
+            if economy and economy.guild_levy then s.sample_guild_levy = try(economy.guild_levy, 0, 0) end
             if w and w.watch then s.sample_watch = try(w.watch, 0) end
             if so and so.noble_auth then s.sample_noble_auth = try(so.noble_auth, 0, 0) end
             if w and w.debasement then s.sample_debasement = try(w.debasement, 0) end
@@ -268,14 +275,14 @@ function M.capture()
             if w and w.siege then s.sample_siege = try(w.siege, 0) end
             if w and w.garrison then s.sample_garrison = try(w.garrison, 0) end
             if w and w.merc_cost then s.sample_merc_cost = try(w.merc_cost, 0, 0) end
-            if _G.building and _G._sample_building then
-                local ok, b = pcall(_G.building.at, _G._sample_building)
+            if building and _G._sample_building then
+                local ok, b = pcall(building.at, _G._sample_building)
                 if ok and b and b.hospital_cap then s.sample_hospital = try(function() return b:hospital_cap() end) end
             end
             if so and so.clergy then s.sample_clergy = try(so.clergy, 0, 0) end
             if so and so.council_power then s.sample_council = try(so.council_power, 0, 0) end
-            if _G.building and _G._sample_building then
-                local ok2, b2 = pcall(_G.building.at, _G._sample_building)
+            if building and _G._sample_building then
+                local ok2, b2 = pcall(building.at, _G._sample_building)
                 if ok2 and b2 and b2.tavern_income then s.sample_tavern_income = try(function() return b2:tavern_income() end) end
             end
             if so and so.church then s.sample_church = try(so.church, 0, 0) end
@@ -2213,7 +2220,7 @@ function M.capture()
             if w and w.house_tax then s.sample_house_tax = try(w.house_tax, 0) end
             if w and w.chapel_tax then s.sample_chapel_tax = try(w.chapel_tax, 0) end
             if w and w.hospital_tax then s.sample_hospital_tax = try(w.hospital_tax, 0) end
-            if _G.economy and _G.economy.guild_tax then s.sample_guild_tax = try(_G.economy.guild_tax, 0, 0) end
+            if economy and economy.guild_tax then s.sample_guild_tax = try(economy.guild_tax, 0, 0) end
             if w and w.pop_limit then s.sample_pop_limit = try(w.pop_limit, 0) end
             if w and w.growth then s.sample_growth = try(w.growth, 0) end
             if w and w.road_toll then s.sample_road_toll = try(w.road_toll, 0, 0) end

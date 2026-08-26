@@ -13,6 +13,9 @@
 
 local M = {}
 
+local game = require("gamecalls")
+local system = require("sysinfo")
+
 local DEFAULT_PATH = "re_report.md"
 
 local function safe_call(mod, fn, ...)
@@ -41,7 +44,6 @@ function M.collect()
     local st = { date = os.date("%Y-%m-%d %H:%M:%S") }
 
     -- game registry
-    local game = _G.game
     if game and game.get_registry then
         local ok, reg = pcall(game.get_registry)
         if ok and type(reg) == "table" then
@@ -54,10 +56,10 @@ function M.collect()
     end
 
     -- system + modules (captured as text)
-    if _G.system then
-        st.system_text = capture_lines(function() if _G.system.info then _G.system.info() end end)
-        st.modules_text = capture_lines(function() if _G.system.list_modules then _G.system.list_modules() end end)
-        st.memory_text = capture_lines(function() if _G.system.memory_info then _G.system.memory_info() end end)
+    if system then
+        st.system_text = capture_lines(function() if system.info then system.info() end end)
+        st.modules_text = capture_lines(function() if system.list_modules then system.list_modules() end end)
+        st.memory_text = capture_lines(function() if system.memory_info then system.memory_info() end end)
     end
 
     -- patches / hooks
