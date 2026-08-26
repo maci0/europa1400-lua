@@ -88,7 +88,7 @@ print("Kernel32 base:", string.format("0x%08X", base))
 ## Memory Scanner (`scan.*`)
 
 ```lua
--- Byte-pattern (AOB) scan — ?? / ? = wildcard, robust to ASLR
+-- Byte-pattern (AOB) scan: ?? / ? = wildcard, unaffected by ASLR
 local hits = scan.scan("55 8B EC 83 EC ??", 0x00400000, 0x200000)
 for _, addr in ipairs(hits) do print(string.format("hit 0x%08X", addr)) end
 scan.find("8B 45 08 ?? 83", 0x400000, 0x200000)   -- alias
@@ -365,7 +365,7 @@ economy.guild_balance(0); economy.market_price(3,0); economy.stock(0,1); economy
 world.time(); world.year(); world.season(); world.city_owner(0); world.office_bribe_cost(0,1); world.guard_count(0)
 quest.start(1,0); quest.complete(1); quest.status(1)
 social.is_member(0,1); social.nobility(0); social.espionage(0,1); social.guild_reputation(0,1); social.dynasty_cash(0); social.prestige(0); social.disease(0); social.faith(0); social.ai_behavior(0); social.bribe_success(0,0,1)
-civic.votes(0,0); civic.crime(0); civic.efficiency(bldg); civic.durability(bldg); civic.is_bribed(0,1); civic.production_rate(bldg,3); civic.city_stability(0); civic.worker_morale(bldg)
+civic.votes(0,0); civic.crime(0); civic.efficiency(bldg); civic.durability(bldg); state.is_bribed(0,1); civic.production_rate(bldg,3); civic.city_stability(0); civic.worker_morale(bldg)
 cheat.gold(99999); cheat.crime(0,0); cheat.stock(0,1,10); cheat.bribe(0,1,500); cheat.supply(0,3,500); cheat.debt(0,0); cheat.spy_info(0,1)
 state.save("sv.sav"); state.pause(1); state.is_paused()
 local a = snapshot.capture(); -- action; local b = snapshot.capture(); snapshot.diff(a,b) -- set _G._snapshot_extended=true for supply/demand/trade/relation

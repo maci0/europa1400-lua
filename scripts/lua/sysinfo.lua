@@ -1,12 +1,7 @@
--- Europa 1400 - System Information and Diagnostics
+-- Europa 1400 - system and process diagnostics.
 --
--- This module provides comprehensive system diagnostic functions for
--- reverse engineering and game analysis:
--- - System hardware information
--- - Memory status and usage
--- - Loaded module enumeration
--- - Window information
--- - Process and thread details
+-- Hardware and memory status, loaded modules with their base addresses, the
+-- process windows and its threads. Read-only; nothing here writes to the game.
 
 local ffi = require('ffi')
 

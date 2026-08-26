@@ -7,8 +7,8 @@ Common issues and solutions for the Europa 1400 Lua Console.
 | Problem | Cause | Solution |
 |---------|-------|----------|
 | Console doesn't appear | ASI file not in correct location | Ensure `luaapi.asi` is in game directory |
-| "Cannot find init script" | Missing lua/ directory | Copy lua/ directory to game folder |
-| Console appears but no commands | Init script failed | Check console for error messages |
+| `Failed to load .../lua/init.lua` | No `lua/` directory beside the ASI | The DLL resolves scripts from its own directory; `make install` puts both in place |
+| Console appears but no commands | init.lua raised | The error is printed above the prompt and repeated in `hook_log.txt` next to the ASI |
 | Focus stealing | Game window conflicts | Use `cls` to clear, avoid window resizing |
 
 ## Function Call Issues
@@ -17,7 +17,7 @@ Common issues and solutions for the Europa 1400 Lua Console.
 |---------|-------|----------|
 | "Function not registered" | Typo in function name | Check with `list()` command |
 | Crashes when calling | Wrong address or signature | Verify address in Ghidra, check signature |
-| Wrong results | Incorrect calling convention | Try `__stdcall` or `__fastcall` |
+| Wrong results | Wrong calling convention | Put it in the signature: `int __stdcall(int)`, `__cdecl`, `__fastcall`, `__thiscall` |
 | Access violations | Invalid memory access | Verify parameters and memory addresses |
 
 ## Memory Operation Issues
@@ -28,7 +28,7 @@ Common issues and solutions for the Europa 1400 Lua Console.
 | Write fails | Read-only memory | `patch.*` auto-uses VirtualProtect; use `watch.diff` to see change |
 | Incorrect data | Wrong data type | Match FFI type to actual data structure |
 | Pattern finds 0 hits | ASLR / wrong base | Use `scan.regions()` to enumerate; try `sig.masked` pattern |
-| Linux `loadfile` OK but load fails | `kernel32` not on Linux | Expected — modules run in-game on Windows; `loadfile`-clean is the Linux check |
+| Linux load fails on `kernel32` | `kernel32` is Windows-only | Expected. `make check` stubs it, so modules load; anything touching live process memory has to be checked in-game |
 
 ## Build Issues
 
@@ -36,16 +36,16 @@ Common issues and solutions for the Europa 1400 Lua Console.
 |---------|-------|----------|
 | Zig not found | Missing Zig compiler | Install Zig from official website |
 | LuaJIT build fails | Missing source | Ensure `vendor/luajit/` contains source |
-| Link errors | Wrong architecture | Build for correct target (x86/x64) |
+| Link errors | LuaJIT built for the wrong target | `make lua` builds it x86 Windows; rebuild it if you changed the target |
 
 ## Catalog / Hunt
 
 | Problem | Cause | Solution |
 |---------|-------|----------|
 | `catalog.hunt` finds nothing | Tags too narrow | Try broader `presets.hunt("map")` or wider base/size |
-| `catalog.register_all` does nothing | No verified addresses | Still candidates — fill `address` via `auto.discover`/`finder` first |
+| `catalog.register_all` does nothing | No entry has a verified address | Every catalog entry is a candidate; fill `address` via `auto.discover`/`finder` first |
 
-## New Modules (scan / valuescan / pointer / xrefs / finder / patch / watch / struct / trace / disasm / sig)
+## Scanning, Patching and Disassembly
 
 | Problem | Cause | Solution |
 |---------|-------|----------|
@@ -56,8 +56,6 @@ Common issues and solutions for the Europa 1400 Lua Console.
 
 ## General Tips
 
-- **Start with simple functions first** - Test basic functions without parameters
-- **Use the debug system** - Enable logging to see what's happening
-- **Check addresses carefully** - Verify addresses from Ghidra are correct  
-- **Test incrementally** - Build up function libraries gradually
-- **Save your work frequently** - Use `game.save()` to avoid losing progress
+- Start with a no-argument function; a wrong signature crashes the game, not the console.
+- `game.debug_on(true)` logs every call and memory operation with timing.
+- `session.save()` and `game.save()` write re-runnable Lua; a crash otherwise costs the session.

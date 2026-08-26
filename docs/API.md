@@ -273,7 +273,7 @@ Embeds a `game.register` snippet so the report alone can re-seed the registry.
 | `diff.compare(a, b)` | Diff two snapshots (byte + i32 hint) | `diff.compare(a, b)` |
 | `diff.watch(addr, len, ms, n)` | Poll and print diffs | `diff.watch(0x12340000, 64, 200, 20)` |
 
-Use when you don't know the exact value — snapshot, perform an in-game action, snapshot again, then diff.
+Use when you don't know the exact value: snapshot, perform an in-game action, snapshot again, then diff.
 
 ## Heap Walker (`heap.*`)
 
@@ -313,7 +313,7 @@ Reads via `ReadProcessMemory` and writes with `ffi.string` to preserve NULs.
 | `enums.lookup(kind, id)` | Decode id via enum (building/good/title/unit) | `enums.lookup("building", 3)` |
 | `enums.dump([kind])` | List enum values | `enums.dump("building")` |
 
-Kinds: `building`, `title`/`good`/`unit_type`/`skill`/`season`/`difficulty`/`guild`/`office`/`faction`/`quest_status`/`marriage`/`crime`/`production`/`morale`/`world_event`/`stock`/`court_favor` (aliases `event`→`world_event`, `favor`→`court_favor`). Best-effort — extend `enums.*` tables as you learn more.
+Kinds: `building`, `title`/`good`/`unit_type`/`skill`/`season`/`difficulty`/`guild`/`office`/`faction`/`quest_status`/`marriage`/`crime`/`production`/`morale`/`world_event`/`stock`/`court_favor` (aliases `event`→`world_event`, `favor`→`court_favor`). Extend the `enums.*` tables as you learn more.
 
 ## Code Generator (`codegen.*`)
 
@@ -354,7 +354,7 @@ Wraps `valuescan`/`pointer`/`struct`/`game.read_mem` for the most common first t
 | `o:dump()` | Field-aware dump via `struct` | `city.at(p):dump()` |
 | `city.offsets` | Override field offsets | `city.offsets.gold = 0x10` |
 
-Offsets are placeholders — calibrate via `struct.dump` once the real city struct is reversed.
+Offsets are placeholders; calibrate via `struct.dump` once the real city struct is reversed.
 
 ## Building Helper (`building.*`)
 
@@ -517,14 +517,14 @@ Offsets are placeholders — calibrate via `struct.dump` once the real city stru
 | `inventory.transfer(s,d,g,n)` | `TransferGoods` wrapper | `inventory.transfer(a,b,3,10)` |
 | `inventory.value(wh)` / `inventory.set_warehouse_capacity(wh,v)` | `GetInventoryValue` / `SetWarehouseCapacity` | `inventory.value(p)` |
 | `inventory.cart_capacity(cart)` / `inventory.set_cart_capacity(cart,v)` | `GetCartCapacity` / `SetCartCapacity` | `inventory.cart_capacity(cart)` |
-| `inventory.caravan_value(ptr)` / `inventory.get_goods(ptr,gid)` / `inventory.set_goods(ptr,gid,v)` | `GetCaravanValue` / `GetInventoryCount` goods helpers | `inventory.get_goods(p, 3)` |
+| `economy.caravan_value(ptr)` / `inventory.get_goods(ptr,gid)` / `inventory.set_goods(ptr,gid,v)` | `GetCaravanValue` / `GetInventoryCount` goods helpers | `inventory.get_goods(p, 3)` |
 | `o:item(i)` | Slot i `{id,count,addr}` | `inventory.at(p):item(0)` |
 | `o:count_for(goodId)` | Count for one good across slots | `inventory.at(p):count_for(3)` |
 | `o:list()` | Print non-empty slots (with good names) | `inventory.at(p):list()` |
 | `o:dump()` | Struct + list | `inventory.at(p):dump()` |
 | `inventory.offsets` | `{stride,id,count,max_items}` | `inventory.offsets.stride = 8` |
 
-Raw slot layout is placeholders — calibrate via `struct.dump` once real inventory struct is reversed.
+The raw slot layout is a placeholder; calibrate via `struct.dump` once the real inventory struct is reversed.
 
 ## Economy Helper (`economy.*`)
 
@@ -2631,7 +2631,7 @@ Enumerates `finder.prologues` in the window, dedups, sorts by distance.
 | `stack.args(ebp, n)` | Dump n args at `[ebp+8]` | `stack.args(0x12FF00, 4)` |
 | `stack.dump(addr, len)` | Hex around stack region | `stack.dump(0x12FF00, 64)` |
 
-Complements `trace` — use when patching/hooking to see *who called* and with what stack args.
+Complements `trace`: use it when patching or hooking to see *who called* and with what stack args.
 
 ## Function Catalog (`catalog.*`)
 
@@ -2655,7 +2655,7 @@ Knowledge base separate from `gamecalls` runtime registry; seed addresses after 
 | `ui.windows()` | Enumerate windows via `system.window_info` | `ui.windows()` |
 | `ui.find(pattern)` | Filter windows by glob `*`/`?` | `ui.find("Europa*")` |
 
-`ui.message`/`dialog` are `pcall`-wrapped `game.call` — missing catalog entries print a hint instead of crashing.
+`ui.message`/`dialog` are `pcall`-wrapped `game.call`; a missing catalog entry prints a hint instead of crashing.
 
 ## Cheats (`cheat.*`)
 
@@ -3672,7 +3672,7 @@ Knowledge base separate from `gamecalls` runtime registry; seed addresses after 
 | `cheat.set_player_addr(addr)` | Remember player struct addr for `cheat.gold` fallback | `cheat.set_player_addr(0x12340000)` |
 | `cheat.help()` | List cheats | `cheat.help()` |
 
-One-liners composing the domain helpers — errors hint which catalog entry to register first.
+One-liners composing the domain helpers. Errors name the catalog entry to register first.
 
 ## Save/State (`state.*`)
 
@@ -3685,20 +3685,20 @@ One-liners composing the domain helpers — errors hint which catalog entry to r
 | `state.pause([flag])` / `state.unpause()` | `PauseGame` (1/0) | `state.pause(1)` |
 | `state.is_paused()` | `IsGamePaused` | `state.is_paused()` |
 | `state.get()` | `GetGameState` | `state.get()` |
-| `state.disease(pid)` / `state.set_disease(pid,v)` | `GetDiseaseState` / `SetDiseaseState` | `state.disease(0)` |
-| `state.guard_count(cityId)` / `state.set_guard_count(cityId,v)` | `GetGuardCount` / `SetGuardCount` | `state.guard_count(0)` |
-| `state.guard_morale(cityId)` / `state.set_guard_morale(cityId,v)` | `GetGuardMorale` / `SetGuardMorale` | `state.guard_morale(0)` |
-| `state.drunk(pid)` / `state.set_drunk(pid,v)` | `GetDrunkLevel` / `SetDrunkLevel` | `state.drunk(0)` |
+| `state.disease(pid)` / `social.set_disease(pid,v)` | `GetDiseaseState` / `SetDiseaseState` | `state.disease(0)` |
+| `state.guard_count(cityId)` / `world.set_guard_count(cityId,v)` | `GetGuardCount` / `SetGuardCount` | `state.guard_count(0)` |
+| `state.guard_morale(cityId)` / `world.set_guard_morale(cityId,v)` | `GetGuardMorale` / `SetGuardMorale` | `state.guard_morale(0)` |
+| `state.drunk(pid)` / `social.set_drunk(pid,v)` | `GetDrunkLevel` / `SetDrunkLevel` | `state.drunk(0)` |
 | `state.heir(pid)` | `GetHeir` | `state.heir(0)` |
 | `state.arrest_warrant(pid)` / `state.issue_warrant(issuer,target)` | `GetArrestWarrant` / `IssueArrestWarrant` | `state.arrest_warrant(0)` |
 | `state.bandit_threat(cityId)` | `GetBanditThreat` | `state.bandit_threat(0)` |
-| `state.excommunication(pid)` / `state.set_excommunication(pid,v)` | `GetExcommunicationState` / `SetExcommunicationState` | `state.excommunication(0)` |
+| `state.excommunication(pid)` / `social.set_excommunication(pid,v)` | `GetExcommunicationState` / `SetExcommunicationState` | `state.excommunication(0)` |
 | `state.alliance(a,b)` | `GetAlliance` | `state.alliance(0,1)` |
 | `state.ambassador(cityId)` | `GetAmbassadorLevel` | `state.ambassador(0)` |
 | `state.character_trait(pid,trait)` | `GetCharacterTrait` | `state.character_trait(0,1)` |
 | `state.fair(id)` | `GetCityFairState` | `state.fair(0)` |
 | `state.festival_state(id)` | `GetFestivalState` | `state.festival_state(0)` |
-| `state.game_speed()` / `state.set_game_speed(v)` | `GetGameSpeed` / `SetGameSpeed` | `state.game_speed()` |
+| `state.game_speed()` / `world.set_speed(v)` | `GetGameSpeed` / `SetGameSpeed` | `state.game_speed()` |
 | `state.event_state(id)` | `GetEventState` | `state.event_state(0)` |
 | `state.evidence(id)` | `GetEvidenceCount` | `state.evidence(0)` |
 | `state.church_corruption(cityId)` | `GetChurchCorruption` | `state.church_corruption(0)` |
@@ -3742,8 +3742,8 @@ One-liners composing the domain helpers — errors hint which catalog entry to r
 | `state.robber_threat(cityId)` | `GetRobberThreat` | `state.robber_threat(0)` |
 | `state.spy_suspicion(a,b)` | `GetSpySuspicion` | `state.spy_suspicion(0,1)` |
 | `state.tavern_brawl(cityId)` | `GetTavernBrawlChance` | `state.tavern_brawl(0)` |
-| `state.time()` / `state.set_time(v)` | `GetTimeHours` / `SetTimeHours` | `state.time()` |
-| `state.year()` / `state.set_year(v)` | `GetYear` / `SetYear` | `state.year()` |
+| `state.time()` / `world.set_time(v)` | `GetTimeHours` / `SetTimeHours` | `state.time()` |
+| `state.year()` / `world.set_year(v)` | `GetYear` / `SetYear` | `state.year()` |
 | `state.broadcast_event(eventId,payload)` | `BroadcastEvent` | `state.broadcast_event(0,"")` |
 | `state.divorce(pid,spouse)` | `Divorce` | `state.divorce(0,1)` |
 | `state.arrest_warrant(pid)` / `state.issue_warrant(issuer,target)` | `GetArrestWarrant` / `IssueArrestWarrant` | `state.arrest_warrant(0)` |
@@ -3768,7 +3768,7 @@ One-liners composing the domain helpers — errors hint which catalog entry to r
 | `snapshot.diff(a,b)` | Diff two snapshots (what changed after action) | `snapshot.diff(a,b)` |
 | `snapshot.save([path,s])` | Persist snapshot as lua table | `snapshot.save("snap1.lua", s)` |
 
-All reads pcall-guarded — missing registrations just leave fields nil. Sample market/guild/tax/city/building fields included. Set `_G._snapshot_extended = true` to also sample supply/demand/trade profit/inventory value/relation/faith/piety/court favor/disease/court rank/AI/tithe/debt/bank/loan/interest/dynasty rep/family wealth/building tax/worker skill/court level/assassin/warrant/verdict/poison/drunk/title tier/evidence/jail/public order/harvest/city rank/city prestige/city favor/office term/guild fee/servants/slots/militia/wall/witnesses/wage/spy_network/age/heir/defense/rent/trait/kidnap/ransom/unrest/security/prosperity/salary/honor/bvalue/papal/heretic/guard_level/blessing/trade_rep/feast/favor_debt/ambassador/festival/food/accident/fire_risk/bounty/charter/corruption/bribe_cooldown/xp/donation/strikes/bandit/spy_suspicion/noble_house/prod_bonus/nepotism/bishop/road/btax/route_profit/caravan/imperial/tavern/monastery/title_rank/plague/apprentice_slots/wall_cost/fair/granary/baker_bonus/master_bribe/gambling/toll/escort/gates/decay/banquet/road_upkeep/stalls/harbor/cathedral/alms/indulgence/decay2/sin/confession/excomm/promo_cost/tax_income/upgrade_cost/university/guard_morale/pilgrim/relic/crusade/joust/tournament/inquisition/militia_upkeep/smuggler/brewery/mill/harbor_fee/festival_cost/cartel/fence/jester/bard/stall_rent/church_tax/blacksmith/dowry/wedding/patrician/tannery/weaver/mint/herb/market_fee/vineyard/pottery/tailor/fishing/orchard/carpenter/ropemaker/apiary/hunting/alchemist/glassworks/mason/distillery/pasture/quarry/forge/sawmill/kiln/foundry/guild_levy/watch/noble_auth/debasement/regulation/siege/garrison/merc_cost/hospital/clergy/council/patrol/bandit_risk/tavern_brawl/guild_hall/court_intrigue/tavern_income/church/noble_demands/office_comp/tax_collector/wall_repair/guild_tax/pop_limit/growth/apothecary/scribe/goldsmith/falconer/jeweler/bathhouse/perfumer/soapmaker/candlemaker/papermill/printing/toolmaker/charcoal/furrier/dyer/saddler/armorer/bowyer/cartwright/mint/winery/shipwright/cooper/spinner/turner/barber/stonecutter/tailor_master/cobbler/butcher/baker2/shepherd/dairy/brewmaster/miller/fishery/chandler/goldbeater/potter/fowler/vintner/distiller/cook/brickmaker/chandler_y/inn/robber/joiner/carter/mining/logging/innkeeper/tollmaster/road_toll/church_corruption.
+All reads are pcall-guarded; a missing registration leaves the field nil. The default capture samples market, guild, tax, city and building fields. Set `_G._snapshot_extended = true` to also sample roughly 243 further fields across economy, court, church, city and workshop state; `snapshot.print(s)` lists whatever was actually resolved.
 
 ## Civic (`civic.*`)
 

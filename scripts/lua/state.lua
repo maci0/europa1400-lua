@@ -160,8 +160,11 @@ function M.city_rank(cityId) return call_or_hint("GetCityRank", cityId or 0) end
 function M.city_growth(cityId) return call_or_hint("GetCityGrowthRate", cityId or 0) end
 function M.espionage(a,b) return call_or_hint("GetEspionageLevel", a,b) end
 function M.siege_progress(cityId) return call_or_hint("GetSiegeProgress", cityId or 0) end
+function M.set_siege_progress(cityId, v) local r=call_or_hint("SetSiegeProgress", cityId or 0, v or 0); print(string.format("siege city=%s -> %s", tostring(cityId), tostring(v))); return r end
 function M.wall_garrison(cityId) return call_or_hint("GetWallGarrisonCount", cityId or 0) end
+function M.set_wall_garrison(cityId, v) local r=call_or_hint("SetWallGarrisonCount", cityId or 0, v or 0); print(string.format("wall garrison city=%s -> %s", tostring(cityId), tostring(v))); return r end
 function M.watch_strength(cityId) return call_or_hint("GetWatchStrength", cityId or 0) end
+function M.set_watch_strength(cityId, v) local r=call_or_hint("SetWatchStrength", cityId or 0, v or 0); print(string.format("watch city=%s -> %s", tostring(cityId), tostring(v))); return r end
 function M.trial_verdict(trialId) return call_or_hint("GetTrialVerdict", trialId or 0) end
 function M.worker_morale(buildingId) return call_or_hint("GetWorkerMorale", buildingId or 0) end
 

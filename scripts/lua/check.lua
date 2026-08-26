@@ -96,13 +96,24 @@ do
     local game = require("gamecalls")
     game.debug_on(false)
     for i, sig in ipairs({ "int()", "void(int)", "int(int, int)", "char*()",
-                           "void*(int,int,int)", "int(void*,int)" }) do
+                           "void*(int,int,int)", "int(void*,int)",
+                           "int __stdcall(int, char*)", "int __thiscall(void*, int)" }) do
         local ok, err = pcall(game.register, "SigShape" .. i, 0x00401000, sig, sig)
         check("register " .. sig, ok, err)
     end
     check("register rejects a signature with no arg list",
         select(1, pcall(game.register, "NoArgs", 0x00401000, "int", "bad")) == false)
     game.debug_on(true)
+end
+
+-- cheat.* names per-object fields (a building's accident chance) that live on
+-- the object <mod>.at(addr) returns, not on the module table. Reaching the
+-- registration hint proves delegate() routed through .at() instead of raising
+-- "does not exist".
+do
+    local ok, err = pcall(require("cheat").accident, 0x00401000)
+    check("cheat delegates to the object accessor",
+        ok == false and tostring(err):find("not registered") ~= nil, err)
 end
 
 -- game.save writes a file that re-registers through require("gamecalls"); if it

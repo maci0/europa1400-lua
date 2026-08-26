@@ -18,10 +18,17 @@
 
 local M = {}
 
+-- Per-object state (a building's output, a unit's cargo) lives on the object
+-- <mod>.at(addr) returns, so fall back to it and let the cheat name the field
+-- directly.
 local function delegate(mod, fn, ...)
-    local g = _G[mod]
-    if g and g[fn] then return g[fn](...) end
-    error(string.format("%s.%s not available (load %s.lua first)", mod, fn, mod))
+    local g = require(mod)
+    if g[fn] then return g[fn](...) end
+    if g.at and select("#", ...) > 0 then
+        local obj = g.at((select(1, ...)))
+        if obj and obj[fn] then return obj[fn](obj, select(2, ...)) end
+    end
+    error(string.format("%s.%s does not exist", mod, fn))
 end
 
 function M.gold(amount)
@@ -2336,11 +2343,11 @@ function M.tailor_master(bldg, gid, v) if v==nil then return delegate("economy",
 
 
 function M.production_bonus(building, goodId, v) if v==nil then return delegate("civic","production_bonus", building, goodId) else return delegate("civic","set_production_bonus", building, goodId, v) end end
-function M.inventory_value(building, v) if v==nil then return delegate("civic","inventory_value", building) else return delegate("civic","set_inventory_value", building, v) end end
+function M.inventory_value(building) return delegate("civic","inventory_value", building) end
 
 
 
-function M.season(v) if v==nil then return delegate("state","season") else return delegate("state","set_season", v) end end
+function M.season() return delegate("state","season") end
 function M.intrigue_level(a,b,v) if v==nil then return delegate("state","intrigue_level", a,b) else return delegate("state","set_intrigue_level", a,b,v) end end
 function M.office_holder(cityId, office, v) if v==nil then return delegate("state","office_holder", cityId, office) else return delegate("state","set_office_holder", cityId, office, v) end end
 function M.office_term(cityId, office, v) if v==nil then return delegate("state","office_term", cityId, office) else return delegate("state","set_office_term", cityId, office, v) end end
@@ -2349,52 +2356,52 @@ function M.road_bandit(cityA, cityB, v) if v==nil then return delegate("state","
 
 
 function M.election_votes(cityId, cand, v) if v==nil then return delegate("state","election_votes", cityId, cand) else return delegate("state","set_election_votes", cityId, cand, v) end end
-function M.privileges(pid, v) if v==nil then return delegate("state","privileges", pid) else return delegate("state","set_privileges", pid, v) end end
-function M.marriage_state(pid, partner, v) if v==nil then return delegate("state","marriage_state", pid, partner) else return delegate("state","set_marriage_state", pid, partner, v) end end
-function M.office_competition(cityId, office, v) if v==nil then return delegate("state","office_competition", cityId, office) else return delegate("state","set_office_competition", cityId, office, v) end end
+function M.privileges(pid) return delegate("state","privileges", pid) end
+function M.marriage_state(pid, partner) return delegate("state","marriage_state", pid, partner) end
+function M.office_competition(cityId, office) return delegate("state","office_competition", cityId, office) end
 function M.patrol(cityId, v) if v==nil then return delegate("state","patrol_strength", cityId) else return delegate("state","set_patrol_strength", cityId, v) end end
-function M.kidnap(a,b,v) if v==nil then return delegate("state","kidnap_chance", a,b) else return delegate("state","set_kidnap_chance", a,b,v) end end
-function M.reputation_decay(a,b,v) if v==nil then return delegate("state","reputation_decay", a,b) else return delegate("state","set_reputation_decay", a,b,v) end end
+function M.kidnap(a, b) return delegate("state","kidnap_chance", a,b) end
+function M.reputation_decay(a,b,v) if v==nil then return delegate("state","reputation_decay", a,b) else return delegate("social","set_reputation_decay", a,b,v) end end
 
 
 
-function M.city_rank(cityId, v) if v==nil then return delegate("state","city_rank", cityId) else return delegate("state","set_city_rank", cityId, v) end end
-function M.city_growth(cityId, v) if v==nil then return delegate("state","city_growth", cityId) else return delegate("state","set_city_growth", cityId, v) end end
-function M.espionage(a,b,v) if v==nil then return delegate("state","espionage", a,b) else return delegate("state","set_espionage", a,b,v) end end
+function M.city_rank(cityId) return delegate("state","city_rank", cityId) end
+function M.city_growth(cityId) return delegate("state","city_growth", cityId) end
+function M.espionage(a,b,v) if v==nil then return delegate("state","espionage", a,b) else return delegate("social","set_espionage", a,b,v) end end
 function M.siege(cityId, v) if v==nil then return delegate("state","siege_progress", cityId) else return delegate("state","set_siege_progress", cityId, v) end end
 function M.wall_garrison(cityId, v) if v==nil then return delegate("state","wall_garrison", cityId) else return delegate("state","set_wall_garrison", cityId, v) end end
 function M.watch(cityId, v) if v==nil then return delegate("state","watch_strength", cityId) else return delegate("state","set_watch_strength", cityId, v) end end
-function M.trial_verdict(trialId, v) if v==nil then return delegate("state","trial_verdict", trialId) else return delegate("state","set_trial_verdict", trialId, v) end end
-function M.worker_morale(bldg, v) if v==nil then return delegate("state","worker_morale", bldg) else return delegate("state","set_worker_morale", bldg, v) end end
+function M.trial_verdict(trialId, v) if v==nil then return delegate("state","trial_verdict", trialId) else return delegate("civic","set_trial_verdict", trialId, v) end end
+function M.worker_morale(bldg, v) if v==nil then return delegate("state","worker_morale", bldg) else return delegate("civic","set_worker_morale", bldg, v) end end
 
 
 
-function M.dynasty_decay(pid, v) if v==nil then return delegate("state","dynasty_decay", pid) else return delegate("state","set_dynasty_decay", pid, v) end end
-function M.marriage_partner(pid, v) if v==nil then return delegate("state","marriage_partner", pid) else return delegate("state","set_marriage_partner", pid, v) end end
-function M.relation(a,b,v) if v==nil then return delegate("state","relation", a,b) else return delegate("state","set_relation", a,b,v) end end
+function M.dynasty_decay(pid) return delegate("state","dynasty_decay", pid) end
+function M.marriage_partner(pid) return delegate("state","marriage_partner", pid) end
+function M.relation(a,b,v) if v==nil then return delegate("state","relation", a,b) else return delegate("social","set_relation", a,b,v) end end
 function M.robber(cityId, v) if v==nil and false then return nil else return delegate("state","robber_threat", cityId) end end
-function M.spy_suspicion(a,b,v) if v==nil then return delegate("state","spy_suspicion", a,b) else return delegate("state","set_spy_suspicion", a,b,v) end end
-function M.brawl(cityId, v) if v==nil then return delegate("state","tavern_brawl", cityId) else return delegate("state","set_tavern_brawl", cityId, v) end end
-function M.time_hours(v) if v==nil then return delegate("state","time") else return delegate("state","set_time", v) end end
-function M.year(v) if v==nil then return delegate("state","year") else return delegate("state","set_year", v) end end
+function M.spy_suspicion(a,b,v) if v==nil then return delegate("state","spy_suspicion", a,b) else return delegate("world","set_spy_suspicion", a,b,v) end end
+function M.brawl(cityId) return delegate("state","tavern_brawl", cityId) end
+function M.time_hours(v) if v==nil then return delegate("state","time") else return delegate("world","set_time", v) end end
+function M.year(v) if v==nil then return delegate("state","year") else return delegate("world","set_year", v) end end
 
 
 
 function M.broadcast(eventId, payload, v) if payload==nil then payload="" end; return delegate("state","broadcast_event", eventId, payload) end
 function M.divorce(pid, spouse, v) if spouse==nil then return delegate("state","divorce", pid, spouse) else return delegate("state","divorce", pid, spouse) end end
 function M.warrant(pid, v) if v==nil then return delegate("state","arrest_warrant", pid) else return delegate("state","issue_warrant", pid, v) end end
-function M.spy_network(a,b,v) if v==nil then return delegate("state","spy_network", a,b) else return delegate("state","set_spy_network", a,b,v) end end
+function M.spy_network(a, b) return delegate("state","spy_network", a,b) end
 function M.diplomacy(a,b,c,d,e) return delegate("state","diplomacy_offer", a,b,c,d,e) end
 
 
 
 function M.player_health(pid, v) if v==nil then return delegate("state","player_health", pid) else return delegate("state","set_player_health", pid, v) end end
 function M.spy_info(a,b) return delegate("state","spy_info", a,b) end
-function M.trial_witness(trialId, v) if v==nil then return delegate("state","trial_witness", trialId) else return delegate("state","set_trial_witness", trialId, v) end end
-function M.bribed(a,b,v) if v==nil then return delegate("state","is_bribed", a,b) else return delegate("state","set_bribed", a,b,v) end end
-function M.besieged(cityId, v) if v==nil then return delegate("state","is_besieged", cityId) else return delegate("state","set_besieged", cityId, v) end end
-function M.vacant(cityId, office, v) if v==nil then return delegate("state","is_office_vacant", cityId, office) else return delegate("state","set_vacant", cityId, office, v) end end
-function M.dead(pid, v) if v==nil then return delegate("state","is_player_dead", pid) else return delegate("state","set_dead", pid, v) end end
+function M.trial_witness(trialId) return delegate("state","trial_witness", trialId) end
+function M.bribed(a, b) return delegate("state","is_bribed", a,b) end
+function M.besieged(cityId) return delegate("state","is_besieged", cityId) end
+function M.vacant(cityId, office) return delegate("state","is_office_vacant", cityId, office) end
+function M.dead(pid) return delegate("state","is_player_dead", pid) end
 function M.trial(accused, crime, v) if crime==nil and v==nil then return delegate("state","trial_witness", accused) end; return delegate("state","start_trial", accused, crime) end
 function M.trigger(cityId, eventId, v) return delegate("state","trigger_event", eventId or cityId, cityId) end
 
