@@ -106,6 +106,24 @@ do
     game.debug_on(true)
 end
 
+-- The README and the docs quote the catalog size and its status; a stale count
+-- there reads as progress that has not happened.
+do
+    local entries = require("catalog").entries
+    local candidates, addressed = 0, 0
+    for _, e in ipairs(entries) do
+        if e.status == "candidate" then candidates = candidates + 1 end
+        if e.address and e.address ~= 0 then addressed = addressed + 1 end
+    end
+    check("every catalog entry is an unaddressed candidate",
+        candidates == #entries and addressed == 0,
+        #entries .. " entries, " .. candidates .. " candidates, " .. addressed .. " addressed")
+
+    local readme = assert(io.open(here .. "/../../README.md")):read("*a")
+    check("README quotes the catalog size",
+        readme:find(tostring(#entries), 1, true) ~= nil, #entries .. " entries")
+end
+
 -- probe, obj and fuzz built cast types the same broken way game.register did.
 do
     local game = require("gamecalls")

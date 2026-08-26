@@ -287,7 +287,7 @@ probe.register("GetGold", 0x401000)        -- picks first OK sig and game.regist
 ## Function Catalog
 
 ```lua
-catalog.list()                   -- 261 curated entries incl. city treasury + building upgrade/hire (economy/player/ui/unit/world/quest/…)
+catalog.list()                   -- 4463 candidate entries, none with a verified address yet
 catalog.find("quest")
 -- One-call sweep for a whole tag:
 catalog.hunt("guild")              -- auto.discover per guild entry

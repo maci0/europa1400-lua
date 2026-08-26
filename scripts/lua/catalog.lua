@@ -4591,7 +4591,6 @@ end
 -- otherwise just prints what would be registered (dry=true).
 function M.register_all(dry)
     local game = require("gamecalls")
-    if not game then error("game not available") end
     local n = 0
     for _, e in ipairs(M.entries) do
         if e.address and e.address ~= 0 then

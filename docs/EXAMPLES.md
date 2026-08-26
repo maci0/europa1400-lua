@@ -1,6 +1,8 @@
 # Example Workflows
 
-Real-world examples of using the Europa 1400 Lua Console for reverse engineering.
+The workflows this toolkit is built around. Addresses like `0x403000` are placeholders:
+substitute what Ghidra or `finder` gives you. No address here is a verified Europa 1400
+address, and no catalog entry has one yet either.
 
 ## Discovering Player Gold System
 
@@ -44,7 +46,7 @@ auto.from_string("GetGold", "Gold", 0x00400000, 0x300000, "int()")
 ## Catalog Quick-Start
 
 ```lua
-catalog.list()                   -- 261 curated entries (economy/player/ui/unit/world/quest incl. city treasury/…)
+catalog.list()                   -- 4463 candidate entries, none with a verified address yet
 catalog.find("gold")
 catalog.by_tag("economy")
 catalog.by_tag("building")

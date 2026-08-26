@@ -79,11 +79,8 @@ end
 function M.register(name, addr, sigs)
     if type(name) ~= "string" or name == "" then error("name required") end
     local results = M.at(addr, sigs or COMMON_SIGS, { {} })
-    -- pick first OK sig
     for _, r in ipairs(results) do
         if r.ok then
-            local game = require("gamecalls")
-            if not game then error("game not available") end
             game.register(name, addr, r.sig, "probed " .. r.sig)
             print(string.format("probe.register: picked '%s' for %s", r.sig, name))
             return r.sig
