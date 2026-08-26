@@ -19,7 +19,8 @@
 #include "logging.h"
 
 #define CONSOLE_BUFFER_SIZE 4096
-#define CONSOLE_TITLE "Europa 1400 - Lua Console"
+#define CONSOLE_VERSION "0.1.0"
+#define CONSOLE_TITLE "Europa 1400 - Lua Console " CONSOLE_VERSION
 #define SCRIPT_SUBDIR "/lua/"
 #define INIT_SCRIPT "init.lua"
 #define MAX_COMMAND_HISTORY 100
@@ -365,7 +366,7 @@ static DWORD WINAPI ConsoleThread(LPVOID param)
         PrintColored(COLOR_WARNING, "Console starts with limited functionality; Lua commands still work.\n\n");
     }
 
-    hook_logf("Lua console initialized, entering main loop");
+    hook_logf("Lua console " CONSOLE_VERSION " initialized, entering main loop");
     RunConsoleLoop(L);
 
 cleanup:

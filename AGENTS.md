@@ -37,3 +37,7 @@ anything that reads live process memory. Windows-only behaviour is verified in-g
 said to be verified only when it was.
 
 `make` must build clean with `-Wall -Wextra`.
+
+A release bumps `CONSOLE_VERSION` in `src/main.c`, adds a `CHANGELOG.md` entry and
+tags. The console title and the log header carry that string, so a bug report names
+the build it came from.
