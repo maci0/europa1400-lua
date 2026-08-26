@@ -3,7 +3,7 @@
 -- Thin convenience around ShowMessage/ShowDialog-style functions
 -- once reversed, plus window enumeration sugar for dialog flow.
 --
---   ui = dofile('lua/ui.lua')  -- or already `ui`
+--   ui = require("ui")  -- or already `ui`
 --   ui.message("Hello from Lua!")
 --   choice = ui.dialog("Attack?", 2)  -- 2 buttons
 --   ui.windows()                       -- enumerate visible windows
@@ -14,10 +14,12 @@
 
 local M = {}
 
+local game = require("gamecalls")
+local system = require("sysinfo")
+
 local function try_game(name, ...)
-    local game = _G.game
     if not game or not game.call then
-        print(string.format("ui: game.%s not available — register %s first", tostring(name), tostring(name)))
+        print(string.format("ui: game.%s not available, register %s first", tostring(name), tostring(name)))
         return nil
     end
     local ok, res = pcall(game.call, name, ...)
@@ -45,12 +47,11 @@ function M.dialog(text, buttons)
 end
 
 function M.windows()
-    local sys = _G.system
-    if not sys or not sys.window_info then
+    if not system.window_info then
         print("ui.windows: system.window_info not available")
         return {}
     end
-    return sys.window_info()
+    return system.window_info()
 end
 
 function M.find(pattern)

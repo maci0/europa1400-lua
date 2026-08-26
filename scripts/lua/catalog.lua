@@ -5,7 +5,7 @@
 -- gamecalls is the runtime registry. Use catalog to browse,
 -- filter and bulk-register.
 --
---   catalog = dofile('lua/catalog.lua')  -- or already `catalog`
+--   catalog = require("catalog")  -- or already `catalog`
 --   catalog.list()
 --   catalog.find("gold")
 --   catalog.by_tag("economy")
@@ -4524,7 +4524,7 @@ end
 
 function M.by_status(status)
     if status == nil or status == "" then
-        print(string.format("Catalog: %d function(s) — use catalog.by_status('candidate') to filter", #M.entries))
+        print(string.format("Catalog: %d function(s); use catalog.by_status('candidate') to filter", #M.entries))
         return M.entries
     end
     local low = status:lower()
@@ -4545,8 +4545,8 @@ function M.hunt(tag_or_needle, base, size, opts)
     local list = M.by_tag(tag_or_needle)
     if #list == 0 then list = M.find(tag_or_needle) end
     if #list == 0 then print("catalog.hunt: no entries for " .. tostring(tag_or_needle)); return {} end
-    local finder = _G.finder or (pcall(dofile, "lua/finder.lua") and _G.finder)
-    local auto = _G.auto or (pcall(dofile, "lua/auto.lua") and _G.auto)
+    local finder = require("finder")
+    local auto = require("auto")
     for _, e in ipairs(list) do
         if shallow then
             -- just print candidate entry, no memory scan (useful on Linux / for planning)
@@ -4574,9 +4574,9 @@ function M.export(path)
     path = path or "catalog_export.lua"
     local f, err = io.open(path, "w")
     if not f then error("cannot open " .. path .. ": " .. tostring(err)) end
-    f:write("-- catalog export " .. os.date("%Y-%m-%d %H:%M:%S") .. " — " .. tostring(#M.entries) .. " entries\n")
-    f:write("-- load with: dofile('" .. path:gsub("'","\\'") .. "') then catalog.register_all()\n")
-    f:write("local catalog = _G.catalog or dofile('lua/catalog.lua')\n")
+    f:write("-- catalog export " .. os.date("%Y-%m-%d %H:%M:%S") .. ", " .. tostring(#M.entries) .. " entries\n")
+    f:write("-- load with: dofile('" .. path:gsub("'", "\\'") .. "') then catalog.register_all()\n")
+    f:write('local catalog = require("catalog")\n')
     for _, e in ipairs(M.entries) do
         f:write(string.format("catalog.entries[#catalog.entries+1] = { name=%q, sig=%q, desc=%q, tags={", e.name, e.sig, e.desc))
         for i, t in ipairs(e.tags or {}) do f:write(string.format("%q", t)); if i < #e.tags then f:write(",") end end
@@ -4590,8 +4590,7 @@ end
 -- Try to register entries that have a resolvable pattern via sig/scan;
 -- otherwise just prints what would be registered (dry=true).
 function M.register_all(dry)
-    local game = _G.game or (pcall(dofile, "lua/gamecalls.lua") and _G.game)
-    if not game then error("game not available") end
+    local game = require("gamecalls")
     local n = 0
     for _, e in ipairs(M.entries) do
         if e.address and e.address ~= 0 then

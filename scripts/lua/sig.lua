@@ -5,7 +5,7 @@
 -- Use with scan/finder to make version-proof signatures for
 -- discovered functions.
 --
---   sig = dofile('lua/sig.lua')
+--   sig = require("sig")
 --   sig.at(0x401000, 16)              -- exact pattern at addr
 --   sig.masked(0x401000, 24)          -- with CALL/JMP immediates as ??
 --   sig.func(0x401000)                -- from func start to RET
@@ -129,7 +129,7 @@ function M.masked(addr, len, opts)
             for k = i+2, math.min(i+5, #bytes) do mask[k] = true end
             i = i + 6
         elseif b == 0x68 and not opts.keep_push_imm then
-            -- PUSH imm32 — often an address; wildcard if looks like pointer
+            -- PUSH imm32, often an address; wildcard if it looks like a pointer
             if i+4 <= #bytes then
                 local imm = bytes[i+1] + bytes[i+2]*256 + bytes[i+3]*65536 + bytes[i+4]*16777216
                 if imm >= 0x00400000 and imm < 0x80000000 then

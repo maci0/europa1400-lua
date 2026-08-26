@@ -5,7 +5,7 @@
 -- prints a diff, optionally snapshots a hex dump around the hit.
 -- Complements valuescan (find it) -> watch (who changes it) -> xrefs/patch.
 --
---   watch = dofile('lua/watch.lua')
+--   watch = require("watch")
 --   w = watch.new(0x12340000, "int")
 --   w:poll(500, 20)                 -- 20 samples, 500ms apart (blocking)
 --   watch.once(0x12340000, "int")   -- single read + pretty print
@@ -155,7 +155,7 @@ function Watcher:wait(timeout_ms, interval_ms)
             return cur, prev
         end
         if kernel32.GetTickCount() - start >= timeout_ms then
-            print("  timeout — no change")
+            print("  timeout, no change")
             return nil, prev
         end
     end

@@ -1,13 +1,10 @@
--- Europa 1400 - System Beep Utilities
--- 
--- This module provides system beep functionality with support for:
--- - Console thread beeping (simple MessageBeep)
--- - Main process thread beeping (via CreateRemoteThread)
--- - Basic thread information display
+-- Europa 1400 - audible ping, for confirming a hook or thread ran.
+--
+-- beep() sounds on the console thread; beep_main() sounds from a thread in the
+-- game process, which is what tells you the game thread is still alive.
 
 local ffi = require('ffi')
 
--- Windows API definitions for beep functionality
 ffi.cdef[[
     // Sound functions
     int MessageBeep(unsigned int uType);
@@ -24,13 +21,8 @@ ffi.cdef[[
     int CloseHandle(void* hObject);
 ]]
 
--- Load Windows DLLs
 local user32 = ffi.load('user32')
 local kernel32 = ffi.load('kernel32')
-
---============================================================================
--- CONSTANTS
---============================================================================
 
 -- Windows MessageBeep sound types
 local BEEP_TYPES = {
@@ -40,12 +32,6 @@ local BEEP_TYPES = {
     WARNING = 0x00000030,      -- Warning sound
     INFORMATION = 0x00000040   -- Information sound
 }
-
-
-
---============================================================================
--- BEEP FUNCTIONS
---============================================================================
 
 -- Simple beep function (runs in console thread)
 local function beep_console(beepType)
@@ -70,7 +56,6 @@ local function beep_main_process(beepType)
     
     print(string.format("MessageBeep address: 0x%08X", tonumber(ffi.cast("uintptr_t", messageBeepAddr))))
     
-    -- Create a simple thread that calls MessageBeep
     -- This will run in the main process but in a separate thread
     local hThread = kernel32.CreateRemoteThread(
         hProcess,           -- Target process (same process)
@@ -108,7 +93,6 @@ local function show_thread_info()
     }
 end
 
--- Export functions
 return {
     beep = beep_console,
     beep_main = beep_main_process,

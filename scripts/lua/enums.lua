@@ -3,7 +3,7 @@
 -- Best-effort enums extracted from public wikis and observed strings.
 -- Lets you decode dumped ints without memorizing magic numbers.
 --
---   enums = dofile('lua/enums.lua')  -- or already `enums`
+--   enums = require("enums")  -- or already `enums`
 --   enums.building(3)
 --   enums.good(0)
 --   enums.title(5)

@@ -3,7 +3,8 @@ TARGET := bin/luaapi.asi
 DEBUG_TARGET := bin/luaapi-debug.asi
 SRCS := src/main.c src/logging.c
 CFLAGS := -Ivendor/luajit/src -DLUAJIT_STATIC
-LDFLAGS := -lc -lshlwapi -lws2_32
+WARNFLAGS := -cflags -Wall -Wextra --
+LDFLAGS := -lc -lshlwapi
 LUAJIT_LIB := vendor/luajit/src/libluajit.a
 
 .PHONY: all clean install debug format lua check
@@ -15,21 +16,21 @@ debug: $(DEBUG_TARGET)
 $(TARGET): $(SRCS) $(LUAJIT_LIB)
 	@mkdir -p $(dir $@)
 	$(ZIG) build-lib -target x86-windows-gnu -dynamic -O ReleaseSmall --name luaapi \
-		-femit-bin=$@ $(CFLAGS) $(LDFLAGS) $(SRCS) $(LUAJIT_LIB)
+		-femit-bin=$@ $(CFLAGS) $(LDFLAGS) $(WARNFLAGS) $(SRCS) $(LUAJIT_LIB)
 
 $(DEBUG_TARGET): $(SRCS) $(LUAJIT_LIB)
 	@mkdir -p $(dir $@)
 	$(ZIG) build-lib -target x86-windows-gnu -dynamic -O Debug --name luaapi-debug \
-		-femit-bin=$@ $(CFLAGS) $(LDFLAGS) $(SRCS) $(LUAJIT_LIB)
+		-femit-bin=$@ $(CFLAGS) $(LDFLAGS) $(WARNFLAGS) $(SRCS) $(LUAJIT_LIB)
 
 clean:
-	rm -f $(TARGET) $(DEBUG_TARGET) bin/*.lib
+	rm -f $(TARGET) $(DEBUG_TARGET) bin/*.lib bin/*.pdb
 
 format:
-	clang-format -i src/*
+	clang-format -i src/*.c src/*.h
 
 lua:
-	cd vendor/luajit &&	make CC="zig cc -target x86-windows-gnu -m32" BUILDMODE=static TARGET_SYS=Windows
+	cd vendor/luajit && $(MAKE) CC="zig cc -target x86-windows-gnu -m32" BUILDMODE=static TARGET_SYS=Windows
 
 check:
 	luajit scripts/lua/check.lua

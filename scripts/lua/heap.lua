@@ -4,7 +4,7 @@
 -- narrow scans to heap regions instead of the whole address space.
 -- Useful when valuescan finds too many hits in image/stack.
 --
---   heap = dofile('lua/heap.lua')    -- or already `heap`
+--   heap = require("heap")    -- or already `heap`
 --   heap.list()                       -- all heaps + block counts
 --   heap.blocks(heapId, 200)          -- dump first 200 blocks of one heap
 --   heap.find(0x12340000)             -- which heap/block owns addr?

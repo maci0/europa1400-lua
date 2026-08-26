@@ -4,8 +4,8 @@
 -- (e.g. GetGold next to SetGold). This helper lists prologues
 -- near an address so you can triage a whole cluster.
 --
---   near = dofile('lua/near.lua')  -- or already `near`
---   near.around(0x401000, 0x1000)          -- funcs within ±0x1000
+--   near = require("near")  -- or already `near`
+--   near.around(0x401000, 0x1000)          -- funcs within +/-0x1000
 --   near.around(0x401000, 0x1000, 5)        -- up to 5 closest
 --   near.list(0x401000, 0x800, 10)          -- sorted by distance
 
@@ -20,7 +20,7 @@ function M.around(addr, radius, limit)
     if type(addr) ~= "number" then error("addr must be number or hex string") end
     radius = radius or 0x1000
     limit  = limit  or 20
-    local finder = _G.finder or (pcall(dofile, "lua/finder.lua") and _G.finder)
+    local finder = require("finder")
     if not finder or not finder.prologues then error("finder not available") end
     local base = addr - radius
     if base < 0x00400000 then base = 0x00400000 end
@@ -39,7 +39,7 @@ function M.around(addr, radius, limit)
     end
     table.sort(cands, function(a,b) return a.dist < b.dist end)
     while #cands > limit do table.remove(cands) end
-    print(string.format("near 0x%08X ±0x%X: %d candidate(s)", addr, radius, #cands))
+    print(string.format("near 0x%08X +/-0x%X: %d candidate(s)", addr, radius, #cands))
     for i, c in ipairs(cands) do
         print(string.format("  [%2d] 0x%08X  +%d  %s", i, c.addr, c.dist, c.pat or ""))
     end

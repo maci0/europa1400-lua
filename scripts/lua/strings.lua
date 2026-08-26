@@ -4,7 +4,7 @@
 -- for discovering UI texts, debug logs and function-adjacent strings
 -- without leaving the console.
 --
---   strs = dofile('lua/strings.lua')
+--   strs = require("strings")
 --   strs.dump(0x00400000, 0x300000, 5)        -- ASCII, min len 5
 --   strs.dump(0x00400000, 0x300000, 5, 200)   -- cap 200 hits
 --   hits = strs.scan(0x00400000, 0x300000, 4)

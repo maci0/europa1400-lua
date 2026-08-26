@@ -1,12 +1,7 @@
--- Europa 1400 - System Information and Diagnostics
+-- Europa 1400 - system and process diagnostics.
 --
--- This module provides comprehensive system diagnostic functions for
--- reverse engineering and game analysis:
--- - System hardware information
--- - Memory status and usage
--- - Loaded module enumeration
--- - Window information
--- - Process and thread details
+-- Hardware and memory status, loaded modules with their base addresses, the
+-- process windows and its threads. Read-only; nothing here writes to the game.
 
 local ffi = require('ffi')
 
@@ -66,19 +61,8 @@ ffi.cdef[[
     } MEMORYSTATUSEX;
 ]]
 
--- Load Windows system DLLs
 local user32 = ffi.load('user32')
 local kernel32 = ffi.load('kernel32')
-
---============================================================================
--- CONSTANTS
---============================================================================
-
-
-
---============================================================================
--- UTILITY FUNCTIONS
---============================================================================
 
 -- Format bytes in human-readable units
 local function format_bytes(bytes)
@@ -93,14 +77,9 @@ local function format_bytes(bytes)
     end
 end
 
--- Create a separator line
 local function separator(length, char)
     return (char or "="):rep(length or 50)
 end
-
---============================================================================
--- DIAGNOSTIC FUNCTIONS  
---============================================================================
 
 -- Show thread information
 local function show_thread_info()
@@ -165,7 +144,7 @@ local function show_memory_info()
             available_virtual = tonumber(memStatus.ullAvailVirtual)
         }
     else
-        print("❌ Failed to retrieve memory status")
+        print("Failed to retrieve memory status")
         return nil
     end
 end
@@ -261,7 +240,7 @@ local function show_window_info()
     _G.temp_windows = nil -- Clean up
     
     if #windows == 0 then
-        print("❌ No windows found for this process")
+        print("No windows found for this process")
         return {process_id = currentPid, windows = {}}
     end
     
@@ -352,7 +331,6 @@ local function show_memory_layout()
     return modules
 end
 
--- Export functions
 return {
     thread_info = show_thread_info,
     info = show_system_info,

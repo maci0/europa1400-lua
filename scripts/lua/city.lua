@@ -4,20 +4,22 @@
 -- Mirrors player.lua: wraps raw game.read_mem/write_mem + preset flows
 -- behind `city.*` so catalog world/economy entries can be triaged quickly.
 --
---   city = dofile('lua/city.lua')  -- or already `city`
+--   city = require("city")  -- or already `city`
 --   city.find()                       -- catalog.hunt("world") helper
 --   city.scan(0x00400000, 0x300000)   -- preset hunt for city strings
 --   city.at(0x12340000):gold()        -- read treasury
 --   city.at(0x12340000):set_gold(9999)
 --   city.at(0x12340000):dump()        -- struct-aware dump
 --
--- Offsets below are defaults (0/4/8/12) — calibrate via struct.dump
+-- Offsets below are defaults (0/4/8/12); calibrate via struct.dump
 -- or catalog once the real city struct is reversed. Override via
 --   city.offsets.gold = 0x10
 
 local M = {}
 
--- default field offsets (placeholder — refine per build)
+local game = require("gamecalls")
+
+-- default field offsets (placeholders, refine per build)
 M.offsets = {
     population = 0,
     happiness  = 4,
@@ -27,14 +29,6 @@ M.offsets = {
     name       = 16,
     name_len   = 32,
 }
-
-local function game_ok()
-    local g = _G.game
-    if g and g.read_mem then return g end
-    local ok, m = pcall(dofile, "lua/gamecalls.lua")
-    if ok and m then return m end
-    return nil
-end
 
 local function to_addr(v)
     if type(v) == "number" then return v end
@@ -48,7 +42,7 @@ end
 function M.scan(base, size)
     base = base or 0x00400000; size = size or 0x300000
     print(string.format("city.scan [0x%08X +0x%X]", base, size))
-    local presets = _G.presets or (pcall(dofile, "lua/presets.lua") and _G.presets)
+    local presets = require("presets")
     if presets and presets.hunt then
         local hits = presets.hunt("city", base, size) or {}
         if #hits > 0 then
@@ -61,7 +55,7 @@ function M.scan(base, size)
 end
 
 function M.find(base, size)
-    local cat = _G.catalog or (pcall(dofile, "lua/catalog.lua") and _G.catalog)
+    local cat = require("catalog")
     if not cat or not cat.hunt then error("catalog not available") end
     -- world tag covers GetCityOwner/SetCityOwner/IsCityBesieged etc.
     local out = cat.hunt("world", base, size)
@@ -73,7 +67,7 @@ local Obj = {}
 Obj.__index = Obj
 
 local function _read_int(addr, field)
-    local g = game_ok()
+    local g = game
     if not g then error("game not available") end
     local off = M.offsets[field]
     if off == nil then error("unknown offset: " .. tostring(field)) end
@@ -84,7 +78,7 @@ end
 
 local function _write_int(addr, field, v)
     if type(v) ~= "number" then error(field .. " must be number") end
-    local g = game_ok()
+    local g = game
     if not g then error("game not available") end
     local off = M.offsets[field]
     if off == nil then error("unknown offset: " .. tostring(field)) end
@@ -106,7 +100,7 @@ function Obj:owner() return _read_int(self.addr, "owner") end
 function Obj:set_owner(v) return _write_int(self.addr, "owner", v) end
 
 function Obj:name()
-    local g = game_ok()
+    local g = game
     if not g then error("game not available") end
     local off = M.offsets.name
     local len = M.offsets.name_len or 32
@@ -119,7 +113,7 @@ function Obj:name()
 end
 
 function Obj:dump()
-    local str = _G.struct or (pcall(dofile, "lua/struct.lua") and _G.struct)
+    local str = require("struct")
     if str and str.dump then
         local ok = pcall(str.dump, self.addr, "City")
         if not ok then
@@ -143,15 +137,14 @@ function Obj:dump()
     return self
 end
 
-
 local function call_world(name, ...)
-    local w = _G.world or (pcall(dofile, "lua/world.lua") and _G.world)
+    local w = require("world")
     if w and w[name] then
         local ok, r = pcall(w[name], w, ...)
         if ok then return r end
     end
     -- fallback to game.call hint with matching GetCity* name (capitalize underscore)
-    local g = game_ok()
+    local g = game
     if g and g.call then
         local catalog_map = {
             rank="GetCityRank", prestige="GetCityPrestige", favor="GetCityFavor",
@@ -166,35 +159,33 @@ local function call_world(name, ...)
     error(name .. " not registered; run world.find()/catalog.hunt")
 end
 
-function Obj:rank()            local w=_G.world or (pcall(dofile,"lua/world.lua") and _G.world); if w and w.city_rank then local ok,r=pcall(w.city_rank,  self.addr); if ok then return r end end; return call_world("GetCityRank", self.addr) end
-function Obj:prestige()        local w=_G.world or (pcall(dofile,"lua/world.lua") and _G.world); if w and w.city_prestige then local ok,r=pcall(w.city_prestige,self.addr); if ok then return r end end; return nil end
-function Obj:favor(pid)        local w=_G.world or (pcall(dofile,"lua/world.lua") and _G.world); if w and w.city_favor then local ok,r=pcall(w.city_favor,self.addr,pid); if ok then return r end end; return nil end
-function Obj:wall_health()     local w=_G.world or (pcall(dofile,"lua/world.lua") and _G.world); if w and w.wall_health then local ok,r=pcall(w.wall_health,self.addr); if ok then return r end end; return nil end
-function Obj:unrest()          local w=_G.world or (pcall(dofile,"lua/world.lua") and _G.world); if w and w.unrest then local ok,r=pcall(w.unrest,self.addr); if ok then return r end end; return nil end
-function Obj:defense()         local w=_G.world or (pcall(dofile,"lua/world.lua") and _G.world); if w and w.city_defense then local ok,r=pcall(w.city_defense,self.addr); if ok then return r end end; return nil end
-function Obj:corruption()      local w=_G.world or (pcall(dofile,"lua/world.lua") and _G.world); if w and w.city_corruption then local ok,r=pcall(w.city_corruption,self.addr); if ok then return r end end; return nil end
-function Obj:stability()       local w=_G.world or (pcall(dofile,"lua/world.lua") and _G.world); if w and w.city_stability then local ok,r=pcall(w.city_stability,self.addr); if ok then return r end end; return nil end
-function Obj:food()            local w=_G.world or (pcall(dofile,"lua/world.lua") and _G.world); if w and w.food then local ok,r=pcall(w.food,self.addr); if ok then return r end end; return nil end
-function Obj:festival_state()  local w=_G.world or (pcall(dofile,"lua/world.lua") and _G.world); if w and w.festival then local ok,r=pcall(w.festival,self.addr); if ok then return r end end; return nil end
+function Obj:rank()            local w=require("world"); if w and w.city_rank then local ok,r=pcall(w.city_rank,  self.addr); if ok then return r end end; return call_world("GetCityRank", self.addr) end
+function Obj:prestige()        local w=require("world"); if w and w.city_prestige then local ok,r=pcall(w.city_prestige,self.addr); if ok then return r end end; return nil end
+function Obj:favor(pid)        local w=require("world"); if w and w.city_favor then local ok,r=pcall(w.city_favor,self.addr,pid); if ok then return r end end; return nil end
+function Obj:wall_health()     local w=require("world"); if w and w.wall_health then local ok,r=pcall(w.wall_health,self.addr); if ok then return r end end; return nil end
+function Obj:unrest()          local w=require("world"); if w and w.unrest then local ok,r=pcall(w.unrest,self.addr); if ok then return r end end; return nil end
+function Obj:defense()         local w=require("world"); if w and w.city_defense then local ok,r=pcall(w.city_defense,self.addr); if ok then return r end end; return nil end
+function Obj:corruption()      local w=require("world"); if w and w.city_corruption then local ok,r=pcall(w.city_corruption,self.addr); if ok then return r end end; return nil end
+function Obj:stability()       local w=require("world"); if w and w.city_stability then local ok,r=pcall(w.city_stability,self.addr); if ok then return r end end; return nil end
+function Obj:food()            local w=require("world"); if w and w.food then local ok,r=pcall(w.food,self.addr); if ok then return r end end; return nil end
+function Obj:festival_state()  local w=require("world"); if w and w.festival then local ok,r=pcall(w.festival,self.addr); if ok then return r end end; return nil end
 
 -- static helpers mirroring world but discoverable via city.*
-function M.rank(cityId)         local w=_G.world or (pcall(dofile,"lua/world.lua") and _G.world); if w and w.city_rank then return w.city_rank(cityId) end end
-function M.prestige(cityId)     local w=_G.world or (pcall(dofile,"lua/world.lua") and _G.world); if w and w.city_prestige then return w.city_prestige(cityId) end end
-function M.favor(cityId,pid)    local w=_G.world or (pcall(dofile,"lua/world.lua") and _G.world); if w and w.city_favor then return w.city_favor(cityId,pid) end end
-function M.wall_health(cityId)  local w=_G.world or (pcall(dofile,"lua/world.lua") and _G.world); if w and w.wall_health then return w.wall_health(cityId) end end
-function M.unrest(cityId)       local w=_G.world or (pcall(dofile,"lua/world.lua") and _G.world); if w and w.unrest then return w.unrest(cityId) end end
-function M.defense(cityId)      local w=_G.world or (pcall(dofile,"lua/world.lua") and _G.world); if w and w.city_defense then return w.city_defense(cityId) end end
+function M.rank(cityId)         local w=require("world"); if w and w.city_rank then return w.city_rank(cityId) end end
+function M.prestige(cityId)     local w=require("world"); if w and w.city_prestige then return w.city_prestige(cityId) end end
+function M.favor(cityId,pid)    local w=require("world"); if w and w.city_favor then return w.city_favor(cityId,pid) end end
+function M.wall_health(cityId)  local w=require("world"); if w and w.wall_health then return w.wall_health(cityId) end end
+function M.unrest(cityId)       local w=require("world"); if w and w.unrest then return w.unrest(cityId) end end
+function M.defense(cityId)      local w=require("world"); if w and w.city_defense then return w.city_defense(cityId) end end
 
 function M.at(addr)
     addr = to_addr(addr)
     return setmetatable({ addr = addr }, Obj)
 end
 
-
 function M.gold_via_call(cityId) return call_world("GetCityGold", cityId) end
-function M.set_gold_via_call(cityId, v) local w=_G.world or (pcall(dofile,"lua/world.lua") and _G.world); if w and w.set_city_gold then return w.set_city_gold(cityId,v) end; return call_world("SetCityGold", cityId, v) end
+function M.set_gold_via_call(cityId, v) local w=require("world"); if w and w.set_city_gold then return w.set_city_gold(cityId,v) end; return call_world("SetCityGold", cityId, v) end
 function M.happiness_via_call(cityId) return call_world("GetCityHappiness", cityId) end
-function M.set_happiness_via_call(cityId, v) local w=_G.world or (pcall(dofile,"lua/world.lua") and _G.world); if w and w.set_city_happiness then return w.set_city_happiness(cityId,v) end; return call_world("SetCityHappiness", cityId, v) end
-
+function M.set_happiness_via_call(cityId, v) local w=require("world"); if w and w.set_city_happiness then return w.set_city_happiness(cityId,v) end; return call_world("SetCityHappiness", cityId, v) end
 
 return M

@@ -4,7 +4,7 @@
 -- Mirrors city/building/unit: wraps game.read_mem + catalog calls
 -- behind `inventory.*` so catalog inventory/economy entries triage quickly.
 --
---   inventory = dofile('lua/inventory.lua')  -- or already `inventory`
+--   inventory = require("inventory")  -- or already `inventory`
 --   inventory.find()                           -- catalog.hunt("inventory")
 --   inventory.scan(0x00400000, 0x300000)       -- preset hunt for inventory strings
 --   inventory.get(owner, goodId)               -- GetInventoryCount or raw read
@@ -16,10 +16,12 @@
 --   inventory.at(0x12340000):list()            -- dump all slots
 --   inventory.at(0x12340000):dump()
 --
--- Offsets below are defaults — calibrate via struct.dump once the real
+-- Offsets below are defaults; calibrate via struct.dump once the real
 -- inventory/warehouse struct is reversed. Override e.g. inventory.offsets.stride=12
 
 local M = {}
+
+local game = require("gamecalls")
 
 M.offsets = {
     stride    = 8,    -- bytes per slot: int id + int count
@@ -27,14 +29,6 @@ M.offsets = {
     count     = 4,
     max_items = 32,   -- slots to scan for list/count_for
 }
-
-local function game_ok()
-    local g = _G.game
-    if g and g.read_mem then return g end
-    local ok, m = pcall(dofile, "lua/gamecalls.lua")
-    if ok and m then return m end
-    return nil
-end
 
 local function to_addr(v)
     if type(v) == "number" then return v end
@@ -48,7 +42,7 @@ end
 function M.scan(base, size)
     base = base or 0x00400000; size = size or 0x300000
     print(string.format("inventory.scan [0x%08X +0x%X]", base, size))
-    local presets = _G.presets or (pcall(dofile, "lua/presets.lua") and _G.presets)
+    local presets = require("presets")
     if presets and presets.hunt then
         local hits = presets.hunt("inventory", base, size) or {}
         if #hits > 0 then
@@ -61,14 +55,14 @@ function M.scan(base, size)
 end
 
 function M.find(base, size)
-    local cat = _G.catalog or (pcall(dofile, "lua/catalog.lua") and _G.catalog)
+    local cat = require("catalog")
     if not cat or not cat.hunt then error("catalog not available") end
     return cat.hunt("inventory", base, size)
 end
 
 -- high-level catalog wrappers (pcall game.call, fallback to nil+hint)
 function M.get(owner, itemId)
-    local g = game_ok()
+    local g = game
     if g and g.call then
         local ok, ret = pcall(g.call, "GetInventoryCount", owner, itemId)
         if ok then return ret end
@@ -86,7 +80,7 @@ function M.get(owner, itemId)
 end
 
 function M.add(owner, itemId, amount)
-    local g = game_ok()
+    local g = game
     if g and g.call then
         local ok, ret = pcall(g.call, "AddInventoryItem", owner, itemId, amount)
         if ok then print(string.format("inventory add owner=%s item=%s x%d -> %s", tostring(owner), tostring(itemId), amount, tostring(ret))); return ret end
@@ -95,7 +89,7 @@ function M.add(owner, itemId, amount)
 end
 
 function M.remove(owner, itemId, amount)
-    local g = game_ok()
+    local g = game
     if g and g.call then
         local ok, ret = pcall(g.call, "RemoveInventoryItem", owner, itemId, amount)
         if ok then print(string.format("inventory remove owner=%s item=%s x%d -> %s", tostring(owner), tostring(itemId), amount, tostring(ret))); return ret end
@@ -104,7 +98,7 @@ function M.remove(owner, itemId, amount)
 end
 
 function M.warehouse(warehouseId, goodId)
-    local g = game_ok()
+    local g = game
     if g and g.call then
         local ok, ret = pcall(g.call, "GetWarehouseGoods", warehouseId, goodId)
         if ok then return ret end
@@ -113,7 +107,7 @@ function M.warehouse(warehouseId, goodId)
 end
 
 function M.transfer(src, dst, goodId, amount)
-    local g = game_ok()
+    local g = game
     if g and g.call then
         local ok, ret = pcall(g.call, "TransferGoods", src, dst, goodId, amount)
         if ok then print(string.format("transfer %s->%s good=%s x%d -> %s", tostring(src), tostring(dst), tostring(goodId), amount, tostring(ret))); return ret end
@@ -121,15 +115,13 @@ function M.transfer(src, dst, goodId, amount)
     error("TransferGoods not registered; register via catalog or game.register first")
 end
 
-
 local function call_or_hint(name, ...)
-    local g = game_ok()
-    if g and g.call then
-        local ok, ret = pcall(g.call, name, ...)
-        if ok then return ret end
-        error(tostring(ret))
+    if not game.get_address(name) then
+        error(name .. " not registered; run inventory.find()/catalog.hunt or game.register first", 2)
     end
-    error(name .. " not registered; run inventory.find()/catalog.hunt or game.register first")
+    local ok, ret = pcall(game.call, name, ...)
+    if ok then return ret end
+    error(tostring(ret), 0)
 end
 
 function M.value(owner) return call_or_hint("GetInventoryValue", owner) end
@@ -143,7 +135,7 @@ function M.has_goods(cart, goodId, amt) return call_or_hint("HasCartGoods", cart
 -- ergonomic aliases + goods-aware helpers
 function M.get_goods(ownerId, good) -- good may be name or id
     if type(good)=="string" then
-        local e=_G.enums or (pcall(dofile,"lua/enums.lua") and _G.enums)
+        local e=require("enums")
         if e and e.lookup then
             -- reverse lookup: find id by name
             local tbl=e.good or e.goods
@@ -154,7 +146,7 @@ function M.get_goods(ownerId, good) -- good may be name or id
 end
 function M.set_goods(ownerId, good, count)
     if type(good)=="string" then
-        local e=_G.enums or (pcall(dofile,"lua/enums.lua") and _G.enums)
+        local e=require("enums")
         if e and e.lookup then
             local tbl=e.good or e.goods
             if tbl then for id,name in pairs(tbl) do if name:lower()==good:lower() then good=id; break end end end
@@ -173,7 +165,7 @@ Obj.__index = Obj
 
 function Obj:item(idx)
     if type(idx) ~= "number" or idx < 0 or idx >= M.offsets.max_items then error("idx 0.." .. (M.offsets.max_items-1) .. " required") end
-    local g = game_ok()
+    local g = game
     if not g then error("game not available") end
     local base = self.addr + idx * M.offsets.stride
     local d = g.read_mem(base + M.offsets.id, 4, "int")
@@ -192,8 +184,8 @@ function Obj:count_for(goodId)
 end
 
 function Obj:list()
-    local g = game_ok()
-    local enums = _G.enums or (pcall(dofile, "lua/enums.lua") and _G.enums)
+    local g = game
+    local enums = require("enums")
     local out = {}
     for i = 0, M.offsets.max_items - 1 do
         local ok, it = pcall(function() return self:item(i) end)
@@ -213,7 +205,7 @@ function Obj:list()
 end
 
 function Obj:dump()
-    local str = _G.struct or (pcall(dofile, "lua/struct.lua") and _G.struct)
+    local str = require("struct")
     if str and str.dump then
         local ok = pcall(str.dump, self.addr, "Inventory")
         if not ok then

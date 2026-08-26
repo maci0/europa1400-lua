@@ -2,10 +2,10 @@
 --
 -- MSVC 32-bit RTTI leaves mangled type names like ".?AVPlayer@@" in the
 -- binary. Finding them reveals class names and, via xrefs, their vtables
--- and virtual methods — a fast way to group the many functions you will
+-- and virtual methods, a fast way to group the many functions you will
 -- reverse next.
 --
---   rtti = dofile('lua/rtti.lua')
+--   rtti = require("rtti")
 --   rtti.list(0x00400000, 0x300000, 100)      -- first 100 type names
 --   rtti.find("Player", 0x00400000, 0x300000) -- filter by substring
 --   rtti.vtables("Player", 0x00400000, 0x800000)
@@ -107,21 +107,7 @@ function M.list(base, size, max_hits)
     base = base and to_addr(base) or 0x00400000
     size = size or 0x300000
     max_hits = max_hits or 200
-    local ok, strs = pcall(dofile, "lua/strings.lua")
-    local hits = {}
-    if ok and strs and strs.find then
-        hits = strs.find(".?AV", base, size, 4, max_hits * 2)
-    else
-        -- fallback: direct byte scan for ".?AV" via memscan
-        local ok2, scan = pcall(dofile, "lua/memscan.lua")
-        if ok2 and scan and scan.find_string then
-            local addrs = scan.find_string(".?AV", base, size, max_hits * 2)
-            for _, a in ipairs(addrs) do
-                local s = read_cstr(a, 256)
-                if s and s:find("%.%?AV") then hits[#hits+1] = { addr = a, text = s } end
-            end
-        end
-    end
+    local hits = require("strings").find(".?AV", base, size, 4, max_hits * 2)
     -- Filter to mangled type names and dedup
     local seen, out = {}, {}
     for _, h in ipairs(hits) do
@@ -165,7 +151,7 @@ function M.find(needle, base, size, max_hits)
 end
 
 -- For a given class/type, find xrefs to its TypeDescriptor string and report
--- nearby vtables — chaining strings -> xrefs -> vtable is caller work, but
+-- nearby vtables: chaining strings -> xrefs -> vtable is caller work, but
 -- we narrow the needle first.
 function M.vtables(needle, base, size)
     if type(needle) ~= "string" or needle == "" then error("needle (class name) required") end
@@ -173,8 +159,8 @@ function M.vtables(needle, base, size)
     size = size or 0x800000
     local types = M.find(needle, base, size, 20)
     if #types == 0 then print("rtti.vtables: no type found for " .. needle); return {} end
-    local xrefs = _G.xrefs or (pcall(dofile, "lua/xrefs.lua") and _G.xrefs)
-    local vtable = _G.vtable or (pcall(dofile, "lua/vtable.lua") and _G.vtable)
+    local xrefs = require("xrefs")
+    local vtable = require("vtable")
     local results = {}
     for _, t in ipairs(types) do
         print(string.format("\nType %s @ 0x%08X:", t.demangled, t.addr))

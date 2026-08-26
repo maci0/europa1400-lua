@@ -4,7 +4,7 @@
 -- Mirrors player/city/building/unit/inventory: thin wrappers over
 -- catalog-registered game.call plus scan/find helpers.
 --
---   economy = dofile('lua/economy.lua')  -- or already `economy`
+--   economy = require("economy")  -- or already `economy`
 --   economy.find()                        -- catalog.hunt("economy")
 --   economy.scan(0x00400000, 0x300000)    -- presets.hunt guild/trade/tax
 --   economy.guild_balance(gid)            -- GetGuildBalance
@@ -21,29 +21,21 @@
 
 local M = {}
 
-local function game_ok()
-    local g = _G.game
-    if g and g.read_mem then return g end
-    local ok, m = pcall(dofile, "lua/gamecalls.lua")
-    if ok and m then return m end
-    return nil
-end
+local game = require("gamecalls")
 
 local function call_or_hint(name, ...)
-    local g = game_ok()
-    if g and g.call then
-        local ok, ret = pcall(g.call, name, ...)
-        if ok then return ret end
-        -- rethrow with original error if present
-        error(tostring(ret))
+    if not game.get_address(name) then
+        error(name .. " not registered; run economy.find() / catalog.hunt('economy') or game.register first", 2)
     end
-    error(name .. " not registered; run economy.find() / catalog.hunt('economy') or game.register first")
+    local ok, ret = pcall(game.call, name, ...)
+    if ok then return ret end
+    error(tostring(ret), 0)
 end
 
 function M.scan(base, size)
     base = base or 0x00400000; size = size or 0x300000
     print(string.format("economy.scan [0x%08X +0x%X]", base, size))
-    local presets = _G.presets or (pcall(dofile, "lua/presets.lua") and _G.presets)
+    local presets = require("presets")
     local hits = {}
     if presets and presets.hunt then
         for _, key in ipairs({ "guild", "trade", "tax", "inventory" }) do
@@ -65,7 +57,7 @@ function M.scan(base, size)
 end
 
 function M.find(base, size)
-    local cat = _G.catalog or (pcall(dofile, "lua/catalog.lua") and _G.catalog)
+    local cat = require("catalog")
     if not cat or not cat.hunt then error("catalog not available") end
     return cat.hunt("economy", base, size)
 end
@@ -178,12 +170,10 @@ function M.set_goldsmith_output(ptr, idx, n) local r=call_or_hint("SetGoldsmithO
 function M.vintner_output(ptr, idx) return call_or_hint("GetVintnerOutput", ptr, idx or 0) end
 function M.set_vintner_output(ptr, idx, n) local r=call_or_hint("SetVintnerOutput", ptr, idx or 0, n or 0); print(string.format("vintner output %s[%s]->%s", tostring(ptr), tostring(idx or 0), tostring(n or 0))); return r end
 
-
 function M.herbgarden_yield(ptr, idx) return call_or_hint("GetHerbGardenYield", ptr, idx or 0) end
 function M.set_herbgarden_yield(ptr, idx, n) local r=call_or_hint("SetHerbGardenYield", ptr, idx or 0, n or 0); print(string.format("herbgarden_yield %s[%s]->%s", tostring(ptr), tostring(idx or 0), tostring(n or 0))); return r end
 function M.tailor_master_output(ptr, idx) return call_or_hint("GetTailorMasterOutput", ptr, idx or 0) end
 function M.set_tailor_master_output(ptr, idx, n) local r=call_or_hint("SetTailorMasterOutput", ptr, idx or 0, n or 0); print(string.format("tailor_master_output %s[%s]->%s", tostring(ptr), tostring(idx or 0), tostring(n or 0))); return r end
-
 
 function M.harvest_yield(ptr, idx) return call_or_hint("GetHarvestYield", ptr, idx or 0) end
 function M.set_harvest_yield(ptr, idx, n) local r=call_or_hint("SetHarvestYield", ptr, idx or 0, n or 0); print(string.format("harvest_yield %s[%s]->%s", tostring(ptr), tostring(idx or 0), tostring(n or 0))); return r end

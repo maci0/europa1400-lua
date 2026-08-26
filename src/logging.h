@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <winsock2.h>
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -20,9 +19,13 @@ typedef struct
 
 extern logging_context g_logctx;
 
+// Opens <dll directory>/hook_log.txt for append. False leaves logging inert;
+// hook_logf stays safe to call either way.
 bool init_logging(HMODULE hModule);
 void close_logging(void);
-void hook_logf(const char *fmt, ...);
-void log_winsock_error(const char *prefix, SOCKET s, int error);
+
+// Thread-safe. Appends a newline if fmt does not end with one. Lines are
+// truncated to LOG_LINE_MAX bytes including the timestamp prefix.
+void hook_logf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
 #endif // LOGGING_H

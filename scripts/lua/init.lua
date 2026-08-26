@@ -1,66 +1,65 @@
--- Europa 1400 Lua Console - Initialization Script
--- Loads all required modules and sets up the console environment
+-- Europa 1400 Lua Console - initialization.
+--
+-- Run by the DLL once package.path points at this directory. Every module is
+-- bound to a global because the console is the user interface.
 
 local ffi = require('ffi')
 
--- Load basic Windows API for compatibility
 ffi.cdef[[
     void __stdcall Sleep(unsigned long dwMilliseconds);
 ]]
-k32 = ffi.load('kernel32')
+k32 = ffi.load('kernel32')         -- Sleep, plus any further cdef'd kernel32 call
 
--- Load core modules
-game = dofile('lua/game_functions.lua')    -- Game function registration system
-system = dofile('lua/sysinfo.lua')        -- System diagnostic functions
-scan = dofile('lua/memscan.lua')          -- Memory scanner (AOB / dump / regions)
-exports = dofile('lua/exports.lua')       -- PE export/import inspector
-xrefs = dofile('lua/xrefs.lua')           -- Cross-reference finder
-valuescan = dofile('lua/valuescan.lua')   -- Value scanner (int32/float/string)
-pointer = dofile('lua/pointer.lua')       -- Pointer chain resolver
-patch = dofile('lua/patch.lua')           -- Live memory patcher (NOP/JMP/restore)
-watch = dofile('lua/watch.lua')           -- Live memory watcher (poll/wait/diff)
-struct = dofile('lua/struct.lua')         -- Structured memory dumper (register/dump/array/hex)
-finder = dofile('lua/finder.lua')         -- Function finder (string/bytes -> xref -> prologue)
-trace  = dofile('lua/trace.lua')          -- Execution tracer (hook game.call)
-disasm = dofile('lua/disasm.lua')         -- Lightweight x86 disassembly view
-sig    = dofile('lua/sig.lua')            -- Signature maker (stable AOB patterns)
-hook   = dofile('lua/hook.lua')           -- IAT hook helper (mod!dll!func -> new addr)
-presets= dofile('lua/presets.lua')        -- RE presets (cheat-sheet string sets)
-strings= dofile('lua/strings.lua')        -- String dumper (ASCII/wide enumeration)
-session= dofile('lua/session.lua')        -- Session manager (collect/save/load/status)
-vtable = dofile('lua/vtable.lua')         -- VTable dumper (class vtables)
-probe  = dofile('lua/probe.lua')          -- Safe call probe (infer sig/arity)
-dump   = dofile('lua/dump.lua')           -- Raw memory dumper to host files
-stack  = dofile('lua/stack.lua')          -- Stack viewer (backtrace / EBP chain)
-near   = dofile('lua/near.lua')           -- Nearby func finder (cluster around addr)
-fuzz   = dofile('lua/fuzz.lua')           -- Fuzz helper (brute-force arg ranges)
-catalog= dofile('lua/catalog.lua')        -- Function catalog (curated list)
-player = dofile('lua/player.lua')         -- Player helper (gold/fame/name via scan/struct)
-city   = dofile('lua/city.lua')           -- City helper (treasury/pop/happiness/owner via scan/struct)
-building = dofile('lua/building.lua')     -- Building helper (level/owner/type/workers/output)
-unit     = dofile('lua/unit.lua')         -- Unit helper (health/owner/type/pos/skill)
-inventory = dofile('lua/inventory.lua')   -- Inventory helper (ware/goods/list/transfer)
-economy = dofile('lua/economy.lua')       -- Economy helper (guild/market/tax/routes)
-world  = dofile('lua/world.lua')          -- World helper (clock/year/season/speed/city/state)
-quest  = dofile('lua/quest.lua')          -- Quest helper (start/complete/status/vars)
-social = dofile('lua/social.lua')         -- Social helper (guild/nobility/reputation/diplomacy/marriage)
-cheat  = dofile('lua/cheat.lua')          -- Cheat shortcuts (gold/fame/health/time/economy/quest)
-state  = dofile('lua/state.lua')          -- Save/state helper (save/load/pause/state)
-snapshot = dofile('lua/snapshot.lua')     -- Cross-domain state snapshot + diff
-civic  = dofile('lua/civic.lua')          -- Civic helper (election/trial/crime/workshop)
-ui     = dofile('lua/ui.lua')             -- UI helper (message/dialog + window sugar)
-enums  = dofile('lua/enums.lua')          -- Enum lookups (building/good/title/unit)
-codegen= dofile('lua/codegen.lua')        -- Code generator (struct/register stubs)
-rtti   = dofile('lua/rtti.lua')           -- RTTI scanner (MSVC type names)
-threads= dofile('lua/threads.lua')        -- Thread inspector (Toolhelp threads)
-report = dofile('lua/report.lua')         -- Report generator (markdown snapshot)
-diff   = dofile('lua/diff.lua')           -- Memory diff (snapshot + compare + watch)
-heap   = dofile('lua/heap.lua')           -- Heap walker (Toolhelp heaps/blocks)
-auto   = dofile('lua/auto.lua')           -- Auto discover (string/preset -> func -> sig/probe)
-obj    = dofile('lua/obj.lua')            -- C++ object helper (thiscall / vtable)
+game = require("gamecalls")        -- Game function registration system
+system = require("sysinfo")        -- System diagnostic functions
+scan = require("memscan")          -- Memory scanner (AOB / dump / regions)
+exports = require("exports")       -- PE export/import inspector
+xrefs = require("xrefs")           -- Cross-reference finder
+valuescan = require("valuescan")   -- Value scanner (int32/float/string)
+pointer = require("pointer")       -- Pointer chain resolver
+patch = require("patch")           -- Live memory patcher (NOP/JMP/restore)
+watch = require("watch")           -- Live memory watcher (poll/wait/diff)
+struct = require("struct")         -- Structured memory dumper (register/dump/array/hex)
+finder = require("finder")         -- Function finder (string/bytes -> xref -> prologue)
+trace  = require("trace")          -- Execution tracer (hook game.call)
+disasm = require("disasm")         -- Lightweight x86 disassembly view
+sig    = require("sig")            -- Signature maker (stable AOB patterns)
+hook   = require("hook")           -- IAT hook helper (mod!dll!func -> new addr)
+presets= require("presets")        -- RE presets (cheat-sheet string sets)
+strings= require("strings")        -- String dumper (ASCII/wide enumeration)
+session= require("session")        -- Session manager (collect/save/load/status)
+vtable = require("vtable")         -- VTable dumper (class vtables)
+probe  = require("probe")          -- Safe call probe (infer sig/arity)
+dump   = require("dump")           -- Raw memory dumper to host files
+stack  = require("stack")          -- Stack viewer (backtrace / EBP chain)
+near   = require("near")           -- Nearby func finder (cluster around addr)
+fuzz   = require("fuzz")           -- Fuzz helper (brute-force arg ranges)
+catalog= require("catalog")        -- Function catalog (curated list)
+player = require("player")         -- Player helper (gold/fame/name via scan/struct)
+city   = require("city")           -- City helper (treasury/pop/happiness/owner via scan/struct)
+building = require("building")     -- Building helper (level/owner/type/workers/output)
+unit     = require("unit")         -- Unit helper (health/owner/type/pos/skill)
+inventory = require("inventory")   -- Inventory helper (ware/goods/list/transfer)
+economy = require("economy")       -- Economy helper (guild/market/tax/routes)
+world  = require("world")          -- World helper (clock/year/season/speed/city/state)
+quest  = require("quest")          -- Quest helper (start/complete/status/vars)
+social = require("social")         -- Social helper (guild/nobility/reputation/diplomacy/marriage)
+cheat  = require("cheat")          -- Cheat shortcuts (gold/fame/health/time/economy/quest)
+state  = require("state")          -- Save/state helper (save/load/pause/state)
+snapshot = require("snapshot")     -- Cross-domain state snapshot + diff
+civic  = require("civic")          -- Civic helper (election/trial/crime/workshop)
+ui     = require("ui")             -- UI helper (message/dialog + window sugar)
+enums  = require("enums")          -- Enum lookups (building/good/title/unit)
+codegen= require("codegen")        -- Code generator (struct/register stubs)
+rtti   = require("rtti")           -- RTTI scanner (MSVC type names)
+threads= require("threads")        -- Thread inspector (Toolhelp threads)
+report = require("report")         -- Report generator (markdown snapshot)
+diff   = require("diff")           -- Memory diff (snapshot + compare + watch)
+heap   = require("heap")           -- Heap walker (Toolhelp heaps/blocks)
+auto   = require("auto")           -- Auto discover (string/preset -> func -> sig/probe)
+obj    = require("obj")            -- C++ object helper (thiscall / vtable)
 
--- Load utility modules
-local beep_module = dofile('lua/beep.lua')
+local beep_module = require("beep")
 beep = beep_module.beep                    -- System beep (console thread)
 beep_main = beep_module.beep_main          -- System beep (main process)
 thread_info = beep_module.info             -- Thread information
@@ -306,7 +305,6 @@ function help()
     print("ALIASES  (shortcuts)")
     print("  hunt(key)  = presets.hunt(key)")
     print("  gold()     = catalog.hunt('economy')")
-    print("  report()   = report.save()")
     print()
 
     -- Utility functions
@@ -339,7 +337,6 @@ end
 -- Global shortcuts
 function hunt(key, base, size) return presets.hunt(key, base, size) end
 function gold() return catalog.hunt("economy") end
-function report() return _G.report.save() end
 
 -- Console initialization and welcome message
 local function show_welcome()

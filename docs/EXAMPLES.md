@@ -1,6 +1,8 @@
 # Example Workflows
 
-Real-world examples of using the Europa 1400 Lua Console for reverse engineering.
+The workflows this toolkit is built around. Addresses like `0x403000` are placeholders:
+substitute what Ghidra or `finder` gives you. No address here is a verified Europa 1400
+address, and no catalog entry has one yet either.
 
 ## Discovering Player Gold System
 
@@ -44,7 +46,7 @@ auto.from_string("GetGold", "Gold", 0x00400000, 0x300000, "int()")
 ## Catalog Quick-Start
 
 ```lua
-catalog.list()                   -- 261 curated entries (economy/player/ui/unit/world/quest incl. city treasury/…)
+catalog.list()                   -- 4463 candidate entries, none with a verified address yet
 catalog.find("gold")
 catalog.by_tag("economy")
 catalog.by_tag("building")
@@ -265,7 +267,7 @@ player.at(0x00AB1234):gold(); city.at(p):population(); building.at(p):efficiency
 unit.at(p):health(); unit.at(p):cart_speed(); unit.at(p):cart_capacity(); unit.at(p):cart_goods(3); inventory.at(p):list(); economy.stock(0,1); economy.daily_income(0); economy.bribe_price(0,1); economy.assassination_cost(0,1)
 world.time(); world.city_owner(0); world.guard_count(0); world.office_bribe_cost(0,1); world.office_prestige(0,1); quest.start(1,0); social.espionage(0,1); social.guild_reputation(0,1); social.prestige(0); social.faith(0); social.bribe_success(0,0,1)
 civic.votes(0,0); civic.crime(0); civic.set_crime(0,0); civic.production_rate(bldg,3); civic.city_stability(0)
-cheat.gold(99999); cheat.income(0, 5000); cheat.crime(0,0); cheat.bribe(0,1,500); cheat.influence(0,0,50); cheat.debt(0,0); cheat.bank(0); cheat.loan(0,1); cheat.repay(0,1)
+cheat.gold(99999); cheat.income(0, 5000); cheat.crime(0,0); cheat.bribe(0,1,500); cheat.influence(0,0,50); cheat.debt(0,0); cheat.bank(0); cheat.loan(0,1); economy.repay(0,1)
 state.save("sv.sav"); state.pause(1)
 local a = snapshot.capture(); -- do action; local b = snapshot.capture(); snapshot.diff(a,b)
 ```

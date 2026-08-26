@@ -3,7 +3,7 @@
 -- Dump process memory to host files for offline analysis in Ghidra,
 -- hex editors, or diffing across game versions.
 --
---   dump = dofile('lua/dump.lua')   -- or already `dump`
+--   dump = require("dump")   -- or already `dump`
 --   dump.region(0x00400000, 0x200000, "dump.bin")
 --   dump.func(0x401000, "func.bin")          -- until RET
 --   dump.range(0x401000, 64, "slice.bin")

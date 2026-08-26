@@ -3,7 +3,7 @@
 -- Automates the common string/bytes -> xref -> prologue -> register loop
 -- so you can discover candidates without leaving the console.
 --
---   finder = dofile('lua/finder.lua')
+--   finder = require("finder")
 --   finder.string_func("Gold", 0x00400000, 0x300000)
 --   finder.bytes_func("55 8B EC 83 EC ??", 0x00400000, 0x200000)
 --   finder.prologues(0x00401000, 0x50000)
@@ -11,15 +11,6 @@
 --   finder.register_hits("Gold_func", "int()", hits)
 
 local M = {}
-
-local function need(mod)
-    local ok, m = pcall(function() return _G[mod] end)
-    if ok and m then return m end
-    -- try load by file
-    local ok2, m2 = pcall(dofile, "lua/" .. mod .. ".lua")
-    if ok2 then return m2 end
-    return nil
-end
 
 local function to_addr(v)
     if type(v) == "number" then return v end
@@ -39,7 +30,7 @@ local PROLOGUES = {
 }
 
 function M.prologues(base, size, max_hits)
-    local scan = need("scan")
+    local scan = require("memscan")
     if not scan then error("scan module not loaded") end
     base = base or 0x00401000
     size = size or 0x200000
@@ -90,8 +81,8 @@ function M.string_func(str, base, size, opts)
     opts = opts or {}
     base = base or 0x00400000
     size = size or 0x300000
-    local scan = need("scan")
-    local xrefs = need("xrefs")
+    local scan = require("memscan")
+    local xrefs = require("xrefs")
     if not scan or not xrefs then error("scan/xrefs not loaded") end
     local s_hits = scan.find_string(str, base, size, 32)
     if #s_hits == 0 then print("string not found: " .. str); return {} end
@@ -119,7 +110,7 @@ function M.bytes_func(pattern, base, size, opts)
     opts = opts or {}
     base = base or 0x00400000
     size = size or 0x200000
-    local scan = need("scan")
+    local scan = require("memscan")
     if not scan then error("scan not loaded") end
     local hits = scan.scan(pattern, base, size, 64)
     print(string.format("Pattern '%s' -> %d hit(s)", pattern, #hits))
@@ -132,14 +123,14 @@ function M.callers(target, base, size, max_hits)
     target = to_addr(target) or target
     if type(target) == "string" then
         -- try game registry
-        local g = need("game")
+        local g = require("gamecalls")
         if g and g.get_address then
             local a = g.get_address(target)
             if a then target = a end
         end
     end
     if type(target) ~= "number" then error("target must be address or registered name") end
-    local xrefs = need("xrefs")
+    local xrefs = require("xrefs")
     if not xrefs then error("xrefs not loaded") end
     base = base or 0x00400000
     size = size or 0x200000
@@ -147,7 +138,7 @@ function M.callers(target, base, size, max_hits)
 end
 
 function M.register_hits(prefix, signature, hits, desc_fmt)
-    local g = need("game")
+    local g = require("gamecalls")
     if not g then error("game not loaded") end
     if type(prefix) ~= "string" or prefix == "" then error("prefix required") end
     signature = signature or "int()"

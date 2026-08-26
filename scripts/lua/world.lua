@@ -3,7 +3,7 @@
 -- Wraps clock / season / speed / difficulty + city/world state
 -- catalog entries behind `world.*`.
 --
---   world = dofile('lua/world.lua')  -- or already `world`
+--   world = require("world")  -- or already `world`
 --   world.find()                       -- catalog.hunt("world")
 --   world.scan(0x00400000, 0x300000)   -- presets.hunt clock/city
 --   world.time()      -- GetTimeHours
@@ -21,28 +21,21 @@
 
 local M = {}
 
-local function game_ok()
-    local g = _G.game
-    if g and g.read_mem then return g end
-    local ok, m = pcall(dofile, "lua/gamecalls.lua")
-    if ok and m then return m end
-    return nil
-end
+local game = require("gamecalls")
 
 local function call_or_hint(name, ...)
-    local g = game_ok()
-    if g and g.call then
-        local ok, ret = pcall(g.call, name, ...)
-        if ok then return ret end
-        error(tostring(ret))
+    if not game.get_address(name) then
+        error(name .. " not registered; run world.find() / catalog.hunt('world') or game.register first", 2)
     end
-    error(name .. " not registered; run world.find() / catalog.hunt('world') or game.register first")
+    local ok, ret = pcall(game.call, name, ...)
+    if ok then return ret end
+    error(tostring(ret), 0)
 end
 
 function M.scan(base, size)
     base = base or 0x00400000; size = size or 0x300000
     print(string.format("world.scan [0x%08X +0x%X]", base, size))
-    local presets = _G.presets or (pcall(dofile, "lua/presets.lua") and _G.presets)
+    local presets = require("presets")
     local hits = {}
     if presets and presets.hunt then
         for _, key in ipairs({ "clock", "city", "map", "guild" }) do
@@ -59,7 +52,7 @@ function M.scan(base, size)
 end
 
 function M.find(base, size)
-    local cat = _G.catalog or (pcall(dofile, "lua/catalog.lua") and _G.catalog)
+    local cat = require("catalog")
     if not cat or not cat.hunt then error("catalog not available") end
     return cat.hunt("world", base, size)
 end
@@ -3892,7 +3885,6 @@ function M.hospital_tax(cityId) return call_or_hint("GetHospitalTaxRate", cityId
 function M.set_hospital_tax(cityId, v) local r=call_or_hint("SetHospitalTaxRate", cityId, v); print(string.format("hospital tax city=%s -> %s", tostring(cityId), tostring(v))); return r end
 
 function M.set_granary_tax(cityId, v) local r=call_or_hint("SetGranaryTaxRate", cityId, v); print(string.format("granary tax city=%s -> %s", tostring(cityId), tostring(v))); return r end
-
 
 function M.set_robber_camp2(cityId, v) local r=call_or_hint("SetRobberCampLevel2", cityId, v); print(string.format("robber camp2 city=%s -> %s", tostring(cityId), tostring(v))); return r end
 
