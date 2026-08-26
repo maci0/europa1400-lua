@@ -4,7 +4,7 @@
 -- handling and restore support. For NOPing, bypassing checks, and
 -- inline JMP hooks during reverse engineering.
 --
---   patch = dofile('lua/patch.lua')
+--   patch = require("patch")
 --   patch.nop(0x401000, 5)
 --   patch.bytes("0x401000", "90 90 90 90 90")
 --   patch.jmp(0x401000, 0x402000)           -- E9 rel32 at src -> dst

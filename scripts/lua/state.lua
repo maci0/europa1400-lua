@@ -2,7 +2,7 @@
 --
 -- Wraps save/load + pause/state catalog entries behind `state.*`.
 --
---   state = dofile('lua/state.lua')  -- or already `state`
+--   state = require("state")  -- or already `state`
 --   state.find()                      -- catalog.hunt("save") + state
 --   state.scan(0x00400000, 0x300000)  -- presets.hunt save/map
 --   state.save("mysave.sav")          -- SaveGame
@@ -13,28 +13,22 @@
 
 local M = {}
 
-local function game_ok()
-    local g = _G.game
-    if g and g.read_mem then return g end
-    local ok, m = pcall(dofile, "lua/gamecalls.lua")
-    if ok and m then return m end
-    return nil
-end
+local game = require("gamecalls")
+
 
 local function call_or_hint(name, ...)
-    local g = game_ok()
-    if g and g.call then
-        local ok, ret = pcall(g.call, name, ...)
-        if ok then return ret end
-        error(tostring(ret))
+    if not game.get_address(name) then
+        error(name .. " not registered; run state.find() / catalog.hunt('save') or game.register first", 2)
     end
-    error(name .. " not registered; run state.find() / catalog.hunt('save') or game.register first")
+    local ok, ret = pcall(game.call, name, ...)
+    if ok then return ret end
+    error(tostring(ret), 0)
 end
 
 function M.scan(base, size)
     base = base or 0x00400000; size = size or 0x300000
     print(string.format("state.scan [0x%08X +0x%X]", base, size))
-    local presets = _G.presets or (pcall(dofile, "lua/presets.lua") and _G.presets)
+    local presets = require("presets")
     local hits = {}
     if presets and presets.hunt then
         for _, key in ipairs({ "save", "clock" }) do
@@ -51,7 +45,7 @@ function M.scan(base, size)
 end
 
 function M.find(base, size)
-    local cat = _G.catalog or (pcall(dofile, "lua/catalog.lua") and _G.catalog)
+    local cat = require("catalog")
     if not cat or not cat.hunt then error("catalog not available") end
     local out = cat.hunt("save", base, size)
     if #out == 0 then out = cat.hunt("state", base, size) end

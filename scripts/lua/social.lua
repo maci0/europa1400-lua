@@ -3,7 +3,7 @@
 -- Wraps guild membership, privileges, nobility, reputation, diplomacy,
 -- alliance, family and marriage catalog entries behind `social.*`.
 --
---   social = dofile('lua/social.lua')  -- or already `social`
+--   social = require("social")  -- or already `social`
 --   social.find()                       -- catalog.hunt("guild") + reputation/diplomacy
 --   social.scan(0x00400000, 0x300000)   -- presets.hunt guild/reputation/chat/unit
 --   social.is_member(pid, gid)          -- IsGuildMember
@@ -25,28 +25,22 @@
 
 local M = {}
 
-local function game_ok()
-    local g = _G.game
-    if g and g.read_mem then return g end
-    local ok, m = pcall(dofile, "lua/gamecalls.lua")
-    if ok and m then return m end
-    return nil
-end
+local game = require("gamecalls")
+
 
 local function call_or_hint(name, ...)
-    local g = game_ok()
-    if g and g.call then
-        local ok, ret = pcall(g.call, name, ...)
-        if ok then return ret end
-        error(tostring(ret))
+    if not game.get_address(name) then
+        error(name .. " not registered; run social.find() / catalog.hunt('guild') or game.register first", 2)
     end
-    error(name .. " not registered; run social.find() / catalog.hunt('guild') or game.register first")
+    local ok, ret = pcall(game.call, name, ...)
+    if ok then return ret end
+    error(tostring(ret), 0)
 end
 
 function M.scan(base, size)
     base = base or 0x00400000; size = size or 0x300000
     print(string.format("social.scan [0x%08X +0x%X]", base, size))
-    local presets = _G.presets or (pcall(dofile, "lua/presets.lua") and _G.presets)
+    local presets = require("presets")
     local hits = {}
     if presets and presets.hunt then
         for _, key in ipairs({ "guild", "reputation", "chat", "unit", "fame" }) do
@@ -63,7 +57,7 @@ function M.scan(base, size)
 end
 
 function M.find(base, size)
-    local cat = _G.catalog or (pcall(dofile, "lua/catalog.lua") and _G.catalog)
+    local cat = require("catalog")
     if not cat or not cat.hunt then error("catalog not available") end
     -- try guild tag first, then fall back to player/state
     local out = cat.hunt("guild", base, size)

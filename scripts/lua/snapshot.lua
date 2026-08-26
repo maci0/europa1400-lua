@@ -5,7 +5,7 @@
 -- can persist domain values alongside memory. All reads are pcall-guarded
 -- so a missing catalog registration just leaves that field nil.
 --
---   snapshot = dofile('lua/snapshot.lua')  -- or already `snapshot`
+--   snapshot = require("snapshot")  -- or already `snapshot`
 --   local s = snapshot.capture()          -- table with time/year/gold/fame/etc
 --   snapshot.print(s)                     -- pretty print
 --   snapshot.save("snap1.lua")            -- persist via session/report
@@ -22,12 +22,12 @@ end
 
 function M.capture()
     local s = { _t = os.date("%Y-%m-%d %H:%M:%S") }
-    local w = _G.world or (pcall(dofile, "lua/world.lua") and _G.world)
-    local p = _G.player or (pcall(dofile, "lua/player.lua") and _G.player)
-    local e = _G.economy or (pcall(dofile, "lua/economy.lua") and _G.economy)
-    local q = _G.quest or (pcall(dofile, "lua/quest.lua") and _G.quest)
-    local so = _G.social or (pcall(dofile, "lua/social.lua") and _G.social)
-    local st = _G.state or (pcall(dofile, "lua/state.lua") and _G.state)
+    local w = require("world")
+    local p = require("player")
+    local e = require("economy")
+    local q = require("quest")
+    local so = require("social")
+    local st = require("state")
     local g = _G.game
 
     if w then
@@ -73,7 +73,7 @@ function M.capture()
     if q then
         s.quest_0_status = try(q.status, 0)
     end
-    local cv = _G.civic or (pcall(dofile, "lua/civic.lua") and _G.civic)
+    local cv = require("civic")
     if cv then
         s.sample_efficiency = try(cv.efficiency, 0)
         s.sample_morale = try(cv.morale, 0)
@@ -128,7 +128,7 @@ function M.capture()
             s.sample_jail_time = try(so.jail_time, 0)
             s.sample_public_order = try(so.public_order, 0) or try(w and w.public_order, 0)
             s.sample_harvest = try(_G.civic and _G.civic.harvest_yield, _G._sample_building or 0, 0)
-            -- economy yield family (added after economy 105→156 harvest/chandler/etc)
+            -- economy yield family
             if _G._snapshot_extended then
                 local ey=_G.economy
                 if ey then
@@ -161,7 +161,7 @@ function M.capture()
             if e and e.guild_fee then s.sample_guild_fee = try(e.guild_fee, 0) end
             do
                 local bid = _G._sample_building
-                local bl = _G.building or (pcall(dofile, "lua/building.lua") and _G.building)
+                local bl = require("building")
                 if bid and bl and bl.at then
                     local ok,b = pcall(bl.at, bid)
                     if ok and b then
@@ -194,7 +194,7 @@ function M.capture()
             if w and w.festival then s.sample_festival = try(w.festival, 0) end
             if _G.unit or _G.building then
                 local ub = _G._sample_unit
-                local ul = _G.unit or (pcall(dofile, "lua/unit.lua") and _G.unit)
+                local ul = require("unit")
                 if ub and ul then
                     local ok,u = pcall(ul.at, ub)
                     if ok and u and u.guard_level then s.sample_guard_level = try(function() return u:guard_level() end) end
@@ -2225,7 +2225,7 @@ function M.capture()
             if so and so.court_intrigue then s.sample_court_intrigue = try(so.court_intrigue, 0, 0) end
             do
                 local bid = _G._sample_building
-                local bl3 = _G.building or (pcall(dofile, "lua/building.lua") and _G.building)
+                local bl3 = require("building")
                 if bid and bl3 and bl3.at then
                     local ok,b3 = pcall(bl3.at, bid)
                     if ok and b3 and b3.brewery_output then s.sample_brewery = try(function() return b3:brewery_output(0) end) end
@@ -2305,7 +2305,7 @@ function M.capture()
             end
             do
                 local bid = _G._sample_building
-                local bl2 = _G.building or (pcall(dofile, "lua/building.lua") and _G.building)
+                local bl2 = require("building")
                 if bid and bl2 and bl2.at then
                     local ok,b2 = pcall(bl2.at, bid)
                     if ok and b2 and b2.upgrade_cost then s.sample_upgrade_cost = try(function() return b2:upgrade_cost(0) end) end
@@ -2313,7 +2313,7 @@ function M.capture()
             end
             do
                 local bid = _G._sample_building
-                local bl = _G.building or (pcall(dofile, "lua/building.lua") and _G.building)
+                local bl = require("building")
                 if bid and bl and bl.at then
                     local ok,b = pcall(bl.at, bid)
                     if ok and b then
@@ -2334,12 +2334,12 @@ function M.capture()
                 end
             end
             do
-                local e2 = _G.economy or (pcall(dofile, "lua/economy.lua") and _G.economy)
+                local e2 = require("economy")
                 if e2 and e2.route_profit then s.sample_route_profit = try(e2.route_profit, 0, 0, 0) end
             end
             do
                 local ub = _G._sample_unit
-                local ul = _G.unit or (pcall(dofile, "lua/unit.lua") and _G.unit)
+                local ul = require("unit")
                 if ub and ul then
                     local ok,u = pcall(ul.at, ub)
                     if ok and u and u.caravan_value then s.sample_caravan = try(function() return u:caravan_value() end) end
@@ -2348,8 +2348,8 @@ function M.capture()
         end
     end
     -- building capacity / upkeep / cart speed if helpers available
-    local bl = _G.building or (pcall(dofile, "lua/building.lua") and _G.building)
-    local ul = _G.unit or (pcall(dofile, "lua/unit.lua") and _G.unit)
+    local bl = require("building")
+    local ul = require("unit")
     if bl and _G._sample_building then
         local ok, b = pcall(bl.at, _G._sample_building)
         if ok and b then
@@ -2374,10 +2374,10 @@ function M.print(s)
             local v = s[k]
             local extra = ""
             if k == "season" and type(v)=="number" then
-                local enums = _G.enums or (pcall(dofile, "lua/enums.lua") and _G.enums)
+                local enums = require("enums")
                 if enums and enums.lookup then local ok, n = pcall(enums.lookup, "season", v); if ok and n then extra = " ("..n..")" end end
             elseif k == "difficulty" and type(v)=="number" then
-                local enums = _G.enums or (pcall(dofile, "lua/enums.lua") and _G.enums)
+                local enums = require("enums")
                 if enums and enums.lookup then local ok, n = pcall(enums.lookup, "difficulty", v); if ok and n then extra = " ("..n..")" end end
             end
             print(string.format("  %-16s = %s%s", k, tostring(v), extra))
@@ -2393,7 +2393,7 @@ function M.print(s)
         print("  sample_market:")
         for gid, price in pairs(s.sample_market) do
             local name = nil
-            local enums = _G.enums or (pcall(dofile, "lua/enums.lua") and _G.enums)
+            local enums = require("enums")
             if enums and enums.lookup then
                 local ok, n = pcall(enums.lookup, "good", gid)
                 if ok then name = n end
@@ -2436,7 +2436,7 @@ end
 
 function M.save(path, s)
     s = s or M.capture()
-    local sess = _G.session or (pcall(dofile, "lua/session.lua") and _G.session)
+    local sess = require("session")
     path = path or "snapshot.lua"
     local f, err = io.open(path, "w")
     if not f then error("cannot open " .. path .. ": " .. tostring(err)) end

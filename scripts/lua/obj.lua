@@ -5,7 +5,7 @@
 -- so you can call virtual methods once you've mapped a class via
 -- rtti/vtable/disasm.
 --
---   obj = dofile('lua/obj.lua')  -- or already `obj`
+--   obj = require("obj")  -- or already `obj`
 --   o = obj.at(0x00AB1234)        -- object at addr (reads vtable ptr)
 --   o:vcall(0, "int(void*)", {})  -- call vtable[0] with this=o.addr
 --   o:call(0x00401234, "int(void*,int)", {5}) -- direct thiscall

@@ -1,71 +1,50 @@
-/**
- * Europa 1400 Lua Console - Interactive Lua scripting interface
+/*
+ * main.c: Europa 1400 Lua console.
  *
- * This DLL provides a comprehensive console interface for executing Lua scripts
- * within the Europa 1400 game environment using LuaJIT FFI. Designed for
- * reverse engineering, game analysis, and function calling from Ghidra.
- *
- * Features:
- * - Interactive Lua console with command history
- * - Game function registration and calling system
- * - System diagnostic functions
- * - Memory read/write operations
- * - Persistent function save/load
- * - Clean DLL unloading without affecting main game
+ * Injected as an ASI/DLL. On process attach a worker thread allocates a
+ * console, creates a LuaJIT state, runs <dll directory>/lua/init.lua and then
+ * reads Lua expressions from stdin until the user exits, at which point the
+ * DLL unloads itself and leaves the game running.
  */
 
 #include "lauxlib.h"
 #include "lua.h"
 #include "lualib.h"
+#include <shlwapi.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <winsock2.h>
 #include <windows.h>
 
 #include "logging.h"
 
-//============================================================================
-// CONFIGURATION AND CONSTANTS
-//============================================================================
-
 #define CONSOLE_BUFFER_SIZE 4096
-#define CONSOLE_TITLE "Europa 1400 - Lua Console v1.0"
-#define INIT_SCRIPT_PATH "lua/init.lua"
+#define CONSOLE_TITLE "Europa 1400 - Lua Console"
+#define SCRIPT_SUBDIR "/lua/"
+#define INIT_SCRIPT "init.lua"
 #define MAX_COMMAND_HISTORY 100
+#define CONSOLE_COLUMNS 120
+#define CONSOLE_SCROLLBACK_ROWS 3000
+#define CONSOLE_WINDOW_WIDTH 800
+#define CONSOLE_WINDOW_HEIGHT 600
+#define UNLOAD_MESSAGE_LINGER_MS 1000
 
-// Console colors for better visibility
-#define COLOR_ERROR FOREGROUND_RED | FOREGROUND_INTENSITY
-#define COLOR_SUCCESS FOREGROUND_GREEN | FOREGROUND_INTENSITY
-#define COLOR_INFO FOREGROUND_BLUE | FOREGROUND_INTENSITY
-#define COLOR_WARNING FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY
-#define COLOR_NORMAL FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE
+#define COLOR_ERROR (FOREGROUND_RED | FOREGROUND_INTENSITY)
+#define COLOR_SUCCESS (FOREGROUND_GREEN | FOREGROUND_INTENSITY)
+#define COLOR_INFO (FOREGROUND_BLUE | FOREGROUND_INTENSITY)
+#define COLOR_WARNING (FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY)
 
-//============================================================================
-// GLOBAL STATE
-//============================================================================
-
-// Module handle for self-unloading
 static HMODULE g_hModule = NULL;
 
-// Console state
-static HANDLE g_hConsole = NULL;
-static WORD   g_originalConsoleAttributes = 0;
+static HANDLE  g_hConsole = NULL;
+static WORD    g_originalConsoleAttributes = 0;
 
-// Command history
+// "<dll directory>/lua/", forward slashes so it can be spliced into Lua paths.
+static char g_scriptDir[MAX_PATH];
+
 static char g_commandHistory[MAX_COMMAND_HISTORY][CONSOLE_BUFFER_SIZE];
 static int  g_historyCount = 0;
-static int  g_historyIndex = 0;
 
-//============================================================================
-// UTILITY FUNCTIONS
-//============================================================================
-
-/**
- * Set console text color for better visual feedback
- * @param color Color attribute (use COLOR_* constants)
- */
 static void SetConsoleColor(WORD color)
 {
     if (g_hConsole)
@@ -74,9 +53,6 @@ static void SetConsoleColor(WORD color)
     }
 }
 
-/**
- * Reset console color to original
- */
 static void ResetConsoleColor(void)
 {
     if (g_hConsole)
@@ -85,11 +61,8 @@ static void ResetConsoleColor(void)
     }
 }
 
-/**
- * Print colored message to console
- * @param color Color to use
- * @param format Printf-style format string
- */
+static void PrintColored(WORD color, const char *format, ...) __attribute__((format(printf, 2, 3)));
+
 static void PrintColored(WORD color, const char *format, ...)
 {
     SetConsoleColor(color);
@@ -102,169 +75,157 @@ static void PrintColored(WORD color, const char *format, ...)
     ResetConsoleColor();
 }
 
-/**
- * Add command to history buffer
- * @param command Command to add
- */
+static void ClearConsole(void)
+{
+    CONSOLE_SCREEN_BUFFER_INFO info;
+    if (!g_hConsole || !GetConsoleScreenBufferInfo(g_hConsole, &info))
+    {
+        return;
+    }
+
+    DWORD cells = (DWORD)info.dwSize.X * (DWORD)info.dwSize.Y;
+    DWORD written;
+    COORD home = {0, 0};
+    FillConsoleOutputCharacterA(g_hConsole, ' ', cells, home, &written);
+    FillConsoleOutputAttribute(g_hConsole, info.wAttributes, cells, home, &written);
+    SetConsoleCursorPosition(g_hConsole, home);
+}
+
 static void AddToHistory(const char *command)
 {
-    if (strlen(command) == 0)
-        return;
-
-    // Avoid duplicate consecutive commands
     if (g_historyCount > 0 && strcmp(g_commandHistory[g_historyCount - 1], command) == 0)
     {
         return;
     }
 
-    // Add to history
-    if (g_historyCount < MAX_COMMAND_HISTORY)
+    int slot = g_historyCount;
+    if (slot == MAX_COMMAND_HISTORY)
     {
-        strncpy(g_commandHistory[g_historyCount], command, CONSOLE_BUFFER_SIZE - 1);
-        g_commandHistory[g_historyCount][CONSOLE_BUFFER_SIZE - 1] = '\0';
-        g_historyCount++;
+        memmove(g_commandHistory[0], g_commandHistory[1], sizeof(g_commandHistory) - CONSOLE_BUFFER_SIZE);
+        slot = MAX_COMMAND_HISTORY - 1;
     }
     else
     {
-        // Shift history buffer
-        for (int i = 0; i < MAX_COMMAND_HISTORY - 1; i++)
-        {
-            strcpy(g_commandHistory[i], g_commandHistory[i + 1]);
-        }
-        strncpy(g_commandHistory[MAX_COMMAND_HISTORY - 1], command, CONSOLE_BUFFER_SIZE - 1);
-        g_commandHistory[MAX_COMMAND_HISTORY - 1][CONSOLE_BUFFER_SIZE - 1] = '\0';
+        g_historyCount++;
     }
 
-    g_historyIndex = g_historyCount;
+    strncpy(g_commandHistory[slot], command, CONSOLE_BUFFER_SIZE - 1);
+    g_commandHistory[slot][CONSOLE_BUFFER_SIZE - 1] = '\0';
 }
 
-/**
- * Sets up the console window with appropriate title and properties
- */
-static BOOL SetupConsoleWindow(void)
+// Fills g_scriptDir with the Lua script directory next to the loaded DLL.
+static BOOL ResolveScriptDir(void)
 {
-    SetConsoleTitle(CONSOLE_TITLE);
-
-    // Get console handles
-    g_hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (g_hConsole == INVALID_HANDLE_VALUE)
+    if (GetModuleFileNameA(g_hModule, g_scriptDir, MAX_PATH) == 0)
     {
         return FALSE;
     }
+    if (!PathRemoveFileSpecA(g_scriptDir))
+    {
+        return FALSE;
+    }
+    if (strlen(g_scriptDir) + strlen(SCRIPT_SUBDIR) + strlen(INIT_SCRIPT) >= MAX_PATH)
+    {
+        return FALSE;
+    }
+    strcat(g_scriptDir, SCRIPT_SUBDIR);
+    for (char *c = g_scriptDir; *c; c++)
+    {
+        if (*c == '\\')
+        {
+            *c = '/';
+        }
+    }
+    return TRUE;
+}
 
-    // Store original console attributes
+static BOOL SetupConsoleWindow(void)
+{
+    SetConsoleTitleA(CONSOLE_TITLE);
+
+    g_hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (g_hConsole == INVALID_HANDLE_VALUE || g_hConsole == NULL)
+    {
+        g_hConsole = NULL;
+        return FALSE;
+    }
+
     CONSOLE_SCREEN_BUFFER_INFO consoleInfo;
     if (GetConsoleScreenBufferInfo(g_hConsole, &consoleInfo))
     {
         g_originalConsoleAttributes = consoleInfo.wAttributes;
     }
 
-    // Set console buffer size for more scrollback
-    COORD newSize = {120, 3000};
+    COORD newSize = {CONSOLE_COLUMNS, CONSOLE_SCROLLBACK_ROWS};
     SetConsoleScreenBufferSize(g_hConsole, newSize);
 
-    // Get console window handle for positioning
     HWND consoleWindow = GetConsoleWindow();
     if (consoleWindow != NULL)
     {
-        // Position console window (not always on top to avoid focus issues)
+        // HWND_TOP rather than HWND_TOPMOST so the console cannot steal focus
+        // from the game window.
         RECT rect;
         GetWindowRect(consoleWindow, &rect);
-        SetWindowPos(consoleWindow, HWND_TOP, rect.left, rect.top, 800, 600, SWP_SHOWWINDOW);
+        SetWindowPos(consoleWindow, HWND_TOP, rect.left, rect.top, CONSOLE_WINDOW_WIDTH, CONSOLE_WINDOW_HEIGHT,
+                     SWP_SHOWWINDOW);
     }
 
     return TRUE;
 }
 
-//============================================================================
-// CORE FUNCTIONS
-//============================================================================
+// Points package.path at the script directory so init.lua and the modules can
+// require() each other regardless of the game's current working directory.
+static void SetLuaPackagePath(lua_State *L)
+{
+    lua_getglobal(L, "package");
+    lua_pushfstring(L, "%s?.lua", g_scriptDir);
+    lua_setfield(L, -2, "path");
+    lua_pop(L, 1);
+}
 
-/**
- * Loads and executes the initialization Lua script
- * @param L Lua state
- * @return TRUE on success, FALSE on error
- */
 static BOOL LoadInitScript(lua_State *L)
 {
-    PrintColored(COLOR_INFO, "Loading initialization script: %s\n", INIT_SCRIPT_PATH);
+    char path[MAX_PATH];
+    snprintf(path, sizeof(path), "%s%s", g_scriptDir, INIT_SCRIPT);
 
-    // Check if file exists first
-    HANDLE hFile =
-        CreateFile(INIT_SCRIPT_PATH, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile == INVALID_HANDLE_VALUE)
-    {
-        PrintColored(COLOR_ERROR, "Error: Cannot find init script '%s'\n", INIT_SCRIPT_PATH);
-        PrintColored(COLOR_WARNING, "Make sure the lua/ directory is in the same location as the game executable.\n");
-        return FALSE;
-    }
-    CloseHandle(hFile);
-
-    // Execute the script
-    int result = luaL_dofile(L, INIT_SCRIPT_PATH);
-    if (result != 0)
+    if (luaL_dofile(L, path) != 0)
     {
         const char *error = lua_tostring(L, -1);
-        PrintColored(COLOR_ERROR, "Failed to load %s: %s\n", INIT_SCRIPT_PATH, error ? error : "(unknown error)");
+        PrintColored(COLOR_ERROR, "Failed to load %s: %s\n", path, error ? error : "(unknown error)");
         lua_pop(L, 1);
         return FALSE;
     }
 
-    PrintColored(COLOR_SUCCESS, "Initialization complete\n\n");
     return TRUE;
 }
 
-/**
- * Trim whitespace from both ends of a string in place
- * @param str String to trim
- */
 static void TrimString(char *str)
 {
-    if (!str)
-        return;
-
-    size_t len = strlen(str);
-    if (len == 0)
-        return;
-
-    // Trim leading whitespace
     char *start = str;
-    while (*start && (*start == ' ' || *start == '\t' || *start == '\n' || *start == '\r'))
+    while (*start == ' ' || *start == '\t' || *start == '\n' || *start == '\r')
     {
         start++;
     }
 
-    if (*start == '\0')
+    char *end = start + strlen(start);
+    while (end > start && (end[-1] == ' ' || end[-1] == '\t' || end[-1] == '\n' || end[-1] == '\r'))
     {
-        str[0] = '\0';
-        return;
-    }
-
-    // Trim trailing whitespace
-    char *end = start + strlen(start) - 1;
-    while (end > start && (*end == ' ' || *end == '\t' || *end == '\n' || *end == '\r'))
-    {
-        *end = '\0';
         end--;
     }
+    *end = '\0';
 
-    // Move trimmed string to beginning
     if (start != str)
     {
-        memmove(str, start, strlen(start) + 1);
+        memmove(str, start, (size_t)(end - start) + 1);
     }
 }
 
-/**
- * Check if command is a built-in console command
- * @param command Command to check
- * @return TRUE if handled, FALSE if should be passed to Lua
- */
+// TRUE if the command was a console builtin and must not reach Lua.
 static BOOL HandleBuiltinCommand(const char *command)
 {
     if (strcmp(command, "cls") == 0 || strcmp(command, "clear") == 0)
     {
-        system("cls");
+        ClearConsole();
         return TRUE;
     }
 
@@ -281,68 +242,42 @@ static BOOL HandleBuiltinCommand(const char *command)
     return FALSE;
 }
 
-/**
- * Processes a single line of user input with enhanced features
- * @param L Lua state
- * @param line Input line to process
- * @return 0 to continue, 1 to exit
- */
-static int ProcessCommand(lua_State *L, const char *line)
+// Trims and runs one input line. Returns 1 when the user asked to exit.
+static int ProcessCommand(lua_State *L, char *command)
 {
-    // Create a working copy and trim whitespace
-    char *command = malloc(strlen(line) + 1);
-    if (!command)
-    {
-        PrintColored(COLOR_ERROR, "Memory allocation failed\n");
-        return 0;
-    }
-
-    strcpy(command, line);
     TrimString(command);
 
-    // Skip empty commands
-    if (strlen(command) == 0)
+    if (command[0] == '\0')
     {
-        free(command);
         return 0;
     }
 
-    // Check for exit commands
     if (strcmp(command, "exit") == 0 || strcmp(command, "quit") == 0 || strcmp(command, "q") == 0)
     {
-        free(command);
         return 1;
     }
 
-    // Add to command history
     AddToHistory(command);
 
-    // Handle built-in commands
     if (HandleBuiltinCommand(command))
     {
-        free(command);
         return 0;
     }
 
-    // Execute Lua command with error handling
-    int result = luaL_dostring(L, command);
-    if (result != 0)
+    if (luaL_dostring(L, command) != 0)
     {
         const char *error = lua_tostring(L, -1);
         PrintColored(COLOR_ERROR, "Lua error: %s\n", error ? error : "(unknown error)");
         lua_pop(L, 1);
     }
 
-    free(command);
     return 0;
 }
 
-/**
- * Display minimal console status after initialization
- */
-static void ShowConsoleReady(void)
+static void RunConsoleLoop(lua_State *L)
 {
-    // Just show that the console is ready - let Lua handle the welcome
+    char inputBuffer[CONSOLE_BUFFER_SIZE];
+
     PrintColored(COLOR_SUCCESS, "Console ready. ");
     printf("Type ");
     PrintColored(COLOR_INFO, "help()");
@@ -351,48 +286,32 @@ static void ShowConsoleReady(void)
     printf(" to clear, ");
     PrintColored(COLOR_INFO, "exit");
     printf(" to quit.\n\n");
-}
 
-/**
- * Main console loop - handles user input and command execution with enhanced features
- * @param L Lua state
- */
-static void RunConsoleLoop(lua_State *L)
-{
-    char inputBuffer[CONSOLE_BUFFER_SIZE];
-
-    // Show minimal ready message (Lua init.lua handles the main welcome)
-    ShowConsoleReady();
-
-    // Main input loop
     while (1)
     {
-        // Show prompt with color
         SetConsoleColor(COLOR_SUCCESS);
         printf("lua> ");
         ResetConsoleColor();
         fflush(stdout);
 
-        // Read user input with buffer overflow protection
         if (!fgets(inputBuffer, sizeof(inputBuffer), stdin))
         {
             PrintColored(COLOR_WARNING, "\nEnd of input reached. Exiting...\n");
             break;
         }
 
-        // Check for buffer overflow
-        if (strlen(inputBuffer) == sizeof(inputBuffer) - 1 && inputBuffer[sizeof(inputBuffer) - 2] != '\n')
+        // A full buffer with no newline means the line was cut short; drop the
+        // rest so its tail is not executed as a separate command.
+        size_t length = strlen(inputBuffer);
+        if (length == sizeof(inputBuffer) - 1 && inputBuffer[length - 1] != '\n')
         {
-            PrintColored(COLOR_ERROR, "Input too long! Maximum %d characters.\n", CONSOLE_BUFFER_SIZE - 1);
-
-            // Clear remaining input from buffer
+            PrintColored(COLOR_ERROR, "Input too long. Maximum %d characters.\n", CONSOLE_BUFFER_SIZE - 1);
             int c;
             while ((c = getchar()) != '\n' && c != EOF)
                 ;
             continue;
         }
 
-        // Process the command
         if (ProcessCommand(L, inputBuffer) == 1)
         {
             PrintColored(COLOR_SUCCESS, "Goodbye!\n");
@@ -401,64 +320,52 @@ static void RunConsoleLoop(lua_State *L)
     }
 }
 
-/**
- * Console thread entry point with comprehensive error handling
- * Sets up console, initializes Lua, and runs the main loop
- */
 static DWORD WINAPI ConsoleThread(LPVOID param)
 {
     (void)param;
     lua_State *L = NULL;
 
-    // Allocate console with error checking
-    if (!AllocConsole())
+    if (!AllocConsole() && GetLastError() != ERROR_ACCESS_DENIED)
     {
-        // Console might already exist, that's okay
-        DWORD error = GetLastError();
-        if (error != ERROR_ACCESS_DENIED)
-        {
-            return 1;
-        }
+        return 1;
     }
 
-    // Redirect standard streams with error checking
     if (!freopen("CONIN$", "r", stdin) || !freopen("CONOUT$", "w", stdout) || !freopen("CONOUT$", "w", stderr))
     {
+        FreeConsole();
+        return 1;
+    }
+
+    if (!SetupConsoleWindow())
+    {
+        printf("Warning: could not set up console window properties\n");
+    }
+
+    init_logging(g_hModule);
+
+    if (!ResolveScriptDir())
+    {
+        PrintColored(COLOR_ERROR, "FATAL: could not resolve the script directory next to the DLL\n");
         goto cleanup;
     }
 
-    // Setup console appearance
-    if (!SetupConsoleWindow())
-    {
-        printf("Warning: Could not setup console window properties\n");
-    }
-
-    // Initialize Lua state with error checking
     L = luaL_newstate();
     if (!L)
     {
-        PrintColored(COLOR_ERROR, "FATAL: Failed to create Lua state\n");
+        PrintColored(COLOR_ERROR, "FATAL: failed to create Lua state\n");
         goto cleanup;
     }
 
-    // Load standard Lua libraries
     luaL_openlibs(L);
-    PrintColored(COLOR_INFO, "%s initialized\n", LUA_VERSION);
+    SetLuaPackagePath(L);
+    PrintColored(COLOR_INFO, "%s initialized, scripts: %s\n", LUA_VERSION, g_scriptDir);
 
-    // Initialize file logging (non-fatal if it fails)
-    init_logging(g_hModule);
-
-    // Load initialization script
     if (!LoadInitScript(L))
     {
-        PrintColored(COLOR_ERROR, "Failed to load initialization script\n");
-        PrintColored(COLOR_WARNING, "Console will start with limited functionality\n");
-        printf("You can still execute Lua commands manually.\n\n");
+        PrintColored(COLOR_WARNING, "Console starts with limited functionality; Lua commands still work.\n\n");
     }
 
     hook_logf("Lua console initialized, entering main loop");
-
-    // Run the main console loop
     RunConsoleLoop(L);
 
 cleanup:
@@ -466,95 +373,42 @@ cleanup:
     hook_logf("Shutting down console");
     close_logging();
 
-    // Clean up Lua resources
     if (L)
     {
         lua_close(L);
-        L = NULL;
     }
 
-    // Reset console colors
     ResetConsoleColor();
+    Sleep(UNLOAD_MESSAGE_LINGER_MS);
 
-    // Give user a moment to see shutdown message
-    Sleep(1000);
-
-    // Close console window gracefully
     HWND consoleWindow = GetConsoleWindow();
     if (consoleWindow)
     {
         ShowWindow(consoleWindow, SW_HIDE);
-        // Don't destroy - let FreeConsole handle it
     }
-
-    // Free console resources
     FreeConsole();
 
-    // Self-unload DLL without affecting main game process
-    if (g_hModule)
-    {
-        HANDLE hUnloadThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)FreeLibrary, g_hModule, 0, NULL);
-        if (hUnloadThread)
-        {
-            CloseHandle(hUnloadThread);
-        }
-    }
-
-    return 0;
+    // Drops the last reference to this DLL and exits atomically, so the game
+    // keeps running without the console.
+    FreeLibraryAndExitThread(g_hModule, 0);
 }
 
-//============================================================================
-// DLL ENTRY POINT
-//============================================================================
-
-/**
- * DLL entry point - handles DLL lifecycle events
- * Creates console thread on process attach with proper error handling
- */
 BOOL APIENTRY DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved)
 {
     (void)lpReserved;
-    switch (dwReason)
-    {
-    case DLL_PROCESS_ATTACH: {
-        // Store module handle for self-unloading capability
-        g_hModule = (HMODULE)hInstance;
 
-        // Optimize performance by disabling thread attach/detach notifications
+    if (dwReason == DLL_PROCESS_ATTACH)
+    {
+        g_hModule = (HMODULE)hInstance;
         DisableThreadLibraryCalls(g_hModule);
 
-        // Create console thread with error handling
-        HANDLE hConsoleThread = CreateThread(NULL,          // Default security attributes
-                                             0,             // Default stack size
-                                             ConsoleThread, // Thread function
-                                             NULL,          // No thread parameter
-                                             0,             // Run immediately
-                                             NULL           // Don't need thread ID
-        );
-
-        if (!hConsoleThread)
+        // A failed console thread must not stop the DLL from loading; the game
+        // would fail to start with it.
+        HANDLE hConsoleThread = CreateThread(NULL, 0, ConsoleThread, NULL, 0, NULL);
+        if (hConsoleThread)
         {
-            // Failed to create thread - this is a critical error
-            // But we don't want to prevent the DLL from loading
-            // as it might interfere with the game
-            return TRUE;
+            CloseHandle(hConsoleThread);
         }
-
-        // Close the thread handle immediately since we don't need to track it
-        // The thread will continue running independently
-        CloseHandle(hConsoleThread);
-        break;
-    }
-
-    case DLL_PROCESS_DETACH:
-        // Note: Cleanup is handled in the console thread itself
-        // to ensure proper shutdown sequence
-        break;
-
-    case DLL_THREAD_ATTACH:
-    case DLL_THREAD_DETACH:
-        // These are disabled by DisableThreadLibraryCalls
-        break;
     }
 
     return TRUE;

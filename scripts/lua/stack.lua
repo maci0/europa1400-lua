@@ -4,7 +4,7 @@
 -- Complements patch/trace when you need to see *who* called a
 -- hooked function and with what stack args.
 --
---   stack = dofile('lua/stack.lua')  -- or already `stack`
+--   stack = require("stack")  -- or already `stack`
 --   stack.capture(0, 16)              -- RtlCaptureStackBackTrace
 --   stack.dump(0, 64)                 -- alias: hex around current stack region
 --   stack.ebp_chain(0x0012FF00, 16)   -- walk EBP chain from addr

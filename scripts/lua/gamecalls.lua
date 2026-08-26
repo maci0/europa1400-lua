@@ -1,15 +1,8 @@
--- Europa 1400 Game Function Calling System
--- 
--- This module provides a comprehensive system for registering and calling
--- game functions discovered through reverse engineering with Ghidra.
--- 
--- Features:
--- - Function registration with FFI signatures
--- - Direct function calling in console thread  
--- - Remote thread execution in main game process
--- - Memory read/write operations
--- - Debug logging and call tracking
--- - Persistent save/load of function registrations
+-- Europa 1400 game function registry.
+--
+-- Registers addresses found in Ghidra as FFI callables, calls them either on
+-- the console thread or on a new thread in the game, and reads/writes process
+-- memory. Registrations survive across runs via save/load.
 
 local ffi = require('ffi')
 
@@ -52,7 +45,6 @@ local function_registry = {}
 local debug_settings = {
     enabled = true,
     log_calls = true,
-    log_parameters = true, 
     log_return_values = true,
     log_memory_ops = true,
     max_log_entries = 1000
@@ -69,6 +61,13 @@ local memory_log = {}
 --============================================================================
 
 -- Count entries in a table
+local function parse_addr(a)
+    if type(a) == "number" then return a end
+    if type(a) ~= "string" then return nil end
+    local s = a:gsub("^%s+", ""):gsub("%s+$", ""):gsub("^0[xX]", "")
+    return tonumber(s, 16)
+end
+
 local function table_count(t)
     local count = 0
     for _ in pairs(t) do count = count + 1 end
@@ -76,17 +75,17 @@ local function table_count(t)
 end
 
 -- Validate function signature format
-local function validate_signature(signature)
-    if not signature or type(signature) ~= "string" then
-        return false, "Signature must be a string"
+-- "int(int, int)" -> "int (*)(int, int)". ffi.cast needs a function *pointer*
+-- type; appending "*" to the signature is not valid C and never parsed.
+local function function_pointer_type(signature)
+    if type(signature) ~= "string" then
+        return nil, "Signature must be a string"
     end
-    
-    -- Basic validation - should contain parentheses
-    if not signature:match("%(.*%)") then
-        return false, "Signature must contain parentheses, e.g., 'int()' or 'void(int, int)'"
+    local ret, args = signature:match("^%s*(.-)%s*(%b())%s*$")
+    if not ret or ret == "" then
+        return nil, "Signature must be 'return(args)', e.g. 'int()' or 'void(int, int)'"
     end
-    
-    return true
+    return ret .. " (*)" .. args
 end
 
 -- Format function parameters for display
@@ -152,7 +151,7 @@ end
 -- @param address: Function address from Ghidra (can be hex string or number)  
 -- @param signature: FFI function signature, e.g. "int(int, int)"
 -- @param description: Optional description
-function register_function(name, address, signature, description)
+local function register_function(name, address, signature, description)
     -- Input validation
     if not name or type(name) ~= "string" or name == "" then
         error("Function name must be a non-empty string")
@@ -160,25 +159,14 @@ function register_function(name, address, signature, description)
     if not address then
         error("Function address is required")
     end
-    -- Validate signature
-    local valid, err = validate_signature(signature)
-    if not valid then
-        error("Invalid signature: " .. err)
+    local ptr_type, sig_err = function_pointer_type(signature)
+    if not ptr_type then
+        error("Invalid signature: " .. sig_err)
     end
-    -- Convert address to number (handle "0x..." prefix and bare hex)
-    local addr_num = address
-    if type(address) == "string" then
-        local s = address:gsub("^%s+", ""):gsub("%s+$", "")
-        s = s:gsub("^0[xX]", "")
-        addr_num = tonumber(s, 16)
-        if not addr_num then
-            error("Invalid address format: " .. address)
-        end
-    elseif type(address) ~= "number" then
-        error("Address must be a number or hex string")
+    local addr_num = parse_addr(address)
+    if not addr_num then
+        error("Address must be a number or a hex string, got: " .. tostring(address))
     end
-    
-    -- Validate address range (basic sanity check)
     if addr_num <= 0 or addr_num > 0xFFFFFFFF then
         error(string.format("Address out of valid range: 0x%08X", addr_num))
     end
@@ -188,13 +176,9 @@ function register_function(name, address, signature, description)
         print(string.format("Warning: Overwriting existing function '%s'", name))
     end
     
-    -- Create FFI function pointer with error handling
-    local success, func_ptr = pcall(function()
-        return ffi.cast(signature .. "*", addr_num)
-    end)
-    
+    local success, func_ptr = pcall(ffi.cast, ptr_type, addr_num)
     if not success then
-        error("Failed to create function pointer: " .. tostring(func_ptr))
+        error("Failed to create function pointer for '" .. ptr_type .. "': " .. tostring(func_ptr))
     end
     
     -- Store function information
@@ -207,7 +191,7 @@ function register_function(name, address, signature, description)
     }
     
     -- Success message
-    print(string.format("✓ Registered function: %s", name))
+    print(string.format("Registered function: %s", name))
     print(string.format("  Address: 0x%08X", addr_num))
     print(string.format("  Signature: %s", signature))
     if description and description ~= "" then
@@ -218,7 +202,7 @@ end
 -- Call a registered function directly (in console thread)
 -- @param name: Function name
 -- @param ...: Function arguments
-function call_function(name, ...)
+local function call_function(name, ...)
     local func_info = function_registry[name]
     if not func_info then
         error("Function '" .. name .. "' not registered")
@@ -264,7 +248,7 @@ end
 -- Note: This works best with simple functions that take basic parameters
 -- @param name: Function name
 -- @param param: Single parameter to pass (limitations of CreateRemoteThread)
-function call_function_main(name, param)
+local function call_function_main(name, param)
     local func_info = function_registry[name]
     if not func_info then
         error("Function '" .. name .. "' not registered")
@@ -329,7 +313,7 @@ function call_function_main(name, param)
 end
 
 -- List all registered functions
-function list_functions()
+local function list_functions()
     print("Registered game functions:")
     print("=" .. string.rep("=", 50))
     
@@ -347,18 +331,11 @@ function list_functions()
     end
 end
 
-local function parse_addr(a)
-    if type(a) == "number" then return a end
-    if type(a) ~= "string" then return nil end
-    local s = a:gsub("^%s+", ""):gsub("%s+$", ""):gsub("^0[xX]", "")
-    return tonumber(s, 16)
-end
-
 -- Read memory at a specific address
 -- @param address: Memory address (number or hex string with optional 0x)
 -- @param size: Number of bytes to read
 -- @param type: FFI type (e.g., "int", "char", "float")
-function read_memory(address, size, ffi_type)
+local function read_memory(address, size, ffi_type)
     local addr_num = parse_addr(address)
     if not addr_num or type(size) ~= "number" or type(ffi_type) ~= "string" then
         error("read_memory: invalid arguments (address, size, type)")
@@ -407,8 +384,11 @@ end
 -- @param address: Memory address (number or hex string)
 -- @param data: Data to write (FFI array or single value)
 -- @param size: Number of bytes to write
-function write_memory(address, data, size)
+local function write_memory(address, data, size)
     local addr_num = parse_addr(address)
+    if not addr_num or type(size) ~= "number" or size <= 0 then
+        error("write_memory: invalid arguments (address, data, size)")
+    end
     local hProcess = kernel32.GetCurrentProcess()
     
     local mem_info = {
@@ -441,7 +421,7 @@ function write_memory(address, data, size)
 end
 
 -- Helper function to get module base address
-function get_module_base(module_name)
+local function get_module_base(module_name)
     local hModule = kernel32.GetModuleHandleA(module_name)
     if hModule ~= nil then
         return tonumber(ffi.cast("uintptr_t", hModule))
@@ -451,7 +431,7 @@ end
 
 -- Save function registrations to file
 -- @param filename: File to save to (default: "functions_save.lua")
-function save_functions(filename)
+local function save_functions(filename)
     filename = filename or "lua/functions_save.lua"
 
     local file, open_err = io.open(filename, "w")
@@ -462,7 +442,7 @@ function save_functions(filename)
     local function esc(s) return (tostring(s):gsub("\\", "\\\\"):gsub('"', '\\"'):gsub("\n", "\\n")) end
     file:write("-- Auto-generated function registrations\n")
     file:write("-- Generated: " .. os.date("%Y-%m-%d %H:%M:%S") .. "\n\n")
-    file:write("local game = dofile('lua/gamecalls.lua')\n\n")
+    file:write('local game = require("gamecalls")\n\n')
 
     for name, info in pairs(function_registry) do
         file:write(string.format('game.register("%s", 0x%08X, "%s", "%s")\n',
@@ -478,7 +458,7 @@ end
 
 -- Load function registrations from file
 -- @param filename: File to load from
-function load_functions(filename)
+local function load_functions(filename)
     filename = filename or "lua/functions_save.lua"
 
     local chunk, err = loadfile(filename)
@@ -486,23 +466,24 @@ function load_functions(filename)
         error("Could not load functions file: " .. (err or "unknown error"))
     end
 
+    local before = table_count(function_registry)
+
     local ok, load_err = pcall(chunk)
     if not ok then
         error("Error executing functions file: " .. tostring(load_err))
     end
 
-    -- loadfile files produced by save_functions re-register via game.register,
-    -- so counting before/after is meaningful.
-    print(string.format("Loaded function registrations from: %s", filename))
+    print(string.format("Loaded %d function registration(s) from: %s",
+        table_count(function_registry) - before, filename))
 end
 
 -- Debug and logging management functions
-function debug_enable(enabled)
+local function debug_enable(enabled)
     debug_settings.enabled = enabled ~= false
     print("Debug logging: " .. (debug_settings.enabled and "ENABLED" or "DISABLED"))
 end
 
-function debug_config(config)
+local function debug_config(config)
     if config then
         for key, value in pairs(config) do
             if debug_settings[key] ~= nil then
@@ -518,7 +499,7 @@ function debug_config(config)
     end
 end
 
-function show_call_log(count)
+local function show_call_log(count)
     count = count or 10
     print(string.format("Recent function calls (last %d):", count))
     print(string.rep("-", 60))
@@ -539,7 +520,7 @@ function show_call_log(count)
     end
 end
 
-function show_memory_log(count)
+local function show_memory_log(count)
     count = count or 10
     print(string.format("Recent memory operations (last %d):", count))
     print(string.rep("-", 60))
@@ -560,7 +541,7 @@ function show_memory_log(count)
     end
 end
 
-function clear_logs()
+local function clear_logs()
     call_log = {}
     memory_log = {}
     print("All logs cleared")
@@ -569,11 +550,11 @@ end
 
 
 -- Registry accessors (for pointer/xref workflows that need raw addresses)
-function get_address(name)
+local function get_address(name)
     local e = function_registry[name]
     return e and e.address or nil
 end
-function get_registry() return function_registry end
+local function get_registry() return function_registry end
 
 -- Export the API
 return {

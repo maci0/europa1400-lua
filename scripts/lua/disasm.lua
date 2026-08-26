@@ -1,12 +1,12 @@
 -- Europa 1400 - Lightweight x86 Disassembler View
 --
 -- Best-effort disassembly for triaging functions found via scan/finder
--- without leaving the console. Not a full capstone replacement — uses
+-- without leaving the console. Not a full capstone replacement; it uses
 -- a small opcode table for the most common 32-bit patterns you see in
 -- MSVC-era game code (prologues, stack ops, calls, jumps, mov/push/pop,
 -- ALU, ret). Falls back to `db 0x??` for unknown bytes.
 --
---   disasm = dofile('lua/disasm.lua')
+--   disasm = require("disasm")
 --   disasm.at(0x401000, 20)           -- 20 insns from addr
 --   disasm.func(0x401000)             -- until RET or 64 insns
 --   disasm.bytes("55 8B EC 83 EC 10") -- decode a hex string directly

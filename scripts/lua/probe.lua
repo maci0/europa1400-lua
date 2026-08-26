@@ -4,7 +4,7 @@
 -- without crashing the console. Useful to infer calling convention and
 -- arity for a newly found candidate before committing a game.register.
 --
---   probe = dofile('lua/probe.lua')   -- or already `probe`
+--   probe = require("probe")   -- or already `probe`
 --   probe.at(0x401000, {"int()", "void(int)", "int(int,int)"} )
 --   probe.at(0x401000, {"int()"}, {{}})                 -- explicit arg sets
 --   probe.at(0x401000, {"int(int)"}, {{0},{1},{-1}, {0x1234}})
@@ -50,7 +50,7 @@ function M.at(addr, sigs, arg_sets)
     end
 
     local results = {}
-    print(string.format("probe 0x%08X — %d sig(s) x %d arg set(s)", addr, #sigs, #arg_sets))
+    print(string.format("probe 0x%08X: %d sig(s) x %d arg set(s)", addr, #sigs, #arg_sets))
     print(string.rep("-", 60))
     for _, sig in ipairs(sigs) do
         for _, args in ipairs(arg_sets) do
@@ -64,7 +64,7 @@ function M.at(addr, sigs, arg_sets)
             else
                 -- only print first line of error
                 local e = tostring(r.result or r.err):gsub("\n.*","")
-                if #e > 80 then e = e:sub(1,80) .. "…" end
+                if #e > 80 then e = e:sub(1,80) .. "..." end
                 print(string.format("  FAIL %-24s %-16s    %s", sig, a, e))
             end
         end
@@ -78,7 +78,7 @@ function M.register(name, addr, sigs)
     -- pick first OK sig
     for _, r in ipairs(results) do
         if r.ok then
-            local game = _G.game or (pcall(dofile, "lua/gamecalls.lua") and _G.game)
+            local game = require("gamecalls")
             if not game then error("game not available") end
             game.register(name, addr, r.sig, "probed " .. r.sig)
             print(string.format("probe.register: picked '%s' for %s", r.sig, name))

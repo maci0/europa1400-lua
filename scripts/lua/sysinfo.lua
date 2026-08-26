@@ -165,7 +165,7 @@ local function show_memory_info()
             available_virtual = tonumber(memStatus.ullAvailVirtual)
         }
     else
-        print("❌ Failed to retrieve memory status")
+        print("Failed to retrieve memory status")
         return nil
     end
 end
@@ -261,7 +261,7 @@ local function show_window_info()
     _G.temp_windows = nil -- Clean up
     
     if #windows == 0 then
-        print("❌ No windows found for this process")
+        print("No windows found for this process")
         return {process_id = currentPid, windows = {}}
     end
     

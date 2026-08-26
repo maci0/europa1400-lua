@@ -5,7 +5,7 @@
 -- you can infer signatures and side effects without a debugger.
 -- Works entirely in the Lua console thread; no code patching.
 --
---   trace = dofile('lua/trace.lua')   -- or already available as `trace`
+--   trace = require("trace")   -- or already available as `trace`
 --   trace.hook()                      -- start tracing all game.call
 --   game.call("GetGold")              -- automatically logged
 --   trace.call("GetGold", 1, 2)       -- explicit traced call
@@ -16,18 +16,14 @@
 
 local M = {}
 
+local game = require("gamecalls")
+
 M.log = {}
 M.max = 500
 M.enabled = nil          -- nil = trace all, or set {["Fn"]=true}
 M._orig_call = nil
 M._hooked = false
 
-local function game_handle()
-    if _G.game and _G.game.call then return _G.game end
-    local ok, g = pcall(dofile, "lua/gamecalls.lua")
-    if ok and g then return g end
-    return nil
-end
 
 local function should_trace(name)
     if M.enabled == nil then return true end
@@ -61,7 +57,7 @@ end
 
 -- Explicit traced call (does not require hook)
 function M.call(name, ...)
-    local g = game_handle()
+    local g = game
     if not g then error("game module not available") end
     if type(name) ~= "string" or name == "" then error("name must be non-empty string") end
     local args = {...}
@@ -92,7 +88,7 @@ end
 
 function M.hook()
     if M._hooked then return end
-    local g = game_handle()
+    local g = game
     if not g then error("game module not available") end
     M._orig_call = g.call
     local orig = g.call
@@ -112,7 +108,7 @@ end
 
 function M.unhook()
     if not M._hooked then return end
-    local g = game_handle()
+    local g = game
     if g and M._orig_call then g.call = M._orig_call end
     M._orig_call = nil
     M._hooked = false

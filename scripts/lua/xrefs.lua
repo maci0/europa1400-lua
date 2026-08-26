@@ -120,9 +120,7 @@ end
 -- Find references to an ASCII string (find string then find its pointers)
 function M.string_refs(str, base, size, max_hits)
     if type(str) ~= "string" or str == "" then error("str required") end
-    local ok, sc = pcall(dofile, "lua/memscan.lua")
-    local scan = ok and sc or (type(_G.scan)=="table" and _G.scan or nil)
-    if not scan then scan = dofile("lua/memscan.lua") end
+    local scan = require("memscan")
     local s_hits = scan.find_string(str, base, size, 32)
     if #s_hits == 0 then
         print("string not found: " .. str)

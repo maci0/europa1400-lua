@@ -4,7 +4,7 @@
 -- Mirrors player/city/building: wraps game.read_mem + preset flows
 -- behind `unit.*` so catalog unit/player entries triage quickly.
 --
---   unit = dofile('lua/unit.lua')  -- or already `unit`
+--   unit = require("unit")  -- or already `unit`
 --   unit.find()                      -- catalog.hunt("unit") helper
 --   unit.scan(0x00400000, 0x300000)  -- preset hunt for unit strings
 --   unit.at(0x12340000):health()     -- read HP
@@ -12,10 +12,12 @@
 --   unit.at(0x12340000):move(512, 384)
 --   unit.at(0x12340000):dump()
 --
--- Offsets are defaults — calibrate via struct.dump once the real
+-- Offsets are defaults; calibrate via struct.dump once the real
 -- unit struct is reversed. Override e.g.  unit.offsets.health = 0x18
 
 local M = {}
+
+local game = require("gamecalls")
 
 M.offsets = {
     health    = 0,
@@ -29,13 +31,6 @@ M.offsets = {
     name_len  = 32,
 }
 
-local function game_ok()
-    local g = _G.game
-    if g and g.read_mem then return g end
-    local ok, m = pcall(dofile, "lua/gamecalls.lua")
-    if ok and m then return m end
-    return nil
-end
 
 local function to_addr(v)
     if type(v) == "number" then return v end
@@ -49,7 +44,7 @@ end
 function M.scan(base, size)
     base = base or 0x00400000; size = size or 0x300000
     print(string.format("unit.scan [0x%08X +0x%X]", base, size))
-    local presets = _G.presets or (pcall(dofile, "lua/presets.lua") and _G.presets)
+    local presets = require("presets")
     if presets and presets.hunt then
         local hits = presets.hunt("unit", base, size) or {}
         if #hits > 0 then
@@ -62,7 +57,7 @@ function M.scan(base, size)
 end
 
 function M.find(base, size)
-    local cat = _G.catalog or (pcall(dofile, "lua/catalog.lua") and _G.catalog)
+    local cat = require("catalog")
     if not cat or not cat.hunt then error("catalog not available") end
     return cat.hunt("unit", base, size)
 end
@@ -71,7 +66,7 @@ local Obj = {}
 Obj.__index = Obj
 
 local function _read_int(addr, field)
-    local g = game_ok()
+    local g = game
     if not g then error("game not available") end
     local off = M.offsets[field]
     if off == nil then error("unknown offset: " .. tostring(field)) end
@@ -82,7 +77,7 @@ end
 
 local function _write_int(addr, field, v)
     if type(v) ~= "number" then error(field .. " must be number") end
-    local g = game_ok()
+    local g = game
     if not g then error("game not available") end
     local off = M.offsets[field]
     if off == nil then error("unknown offset: " .. tostring(field)) end
@@ -101,7 +96,7 @@ function Obj:x()         return _read_int(self.addr, "x") end
 function Obj:y()         return _read_int(self.addr, "y") end
 function Obj:skill()     return _read_int(self.addr, "skill") end
 function Obj:cart_speed()
-    local g = game_ok()
+    local g = game
     if g and g.call then local ok, r = pcall(g.call, "GetCartSpeed", self.addr); if ok then return r end end
     return _read_int(self.addr, "skill")
 end
@@ -109,33 +104,33 @@ function Obj:set_health(v) return _write_int(self.addr, "health", v) end
 function Obj:set_owner(v)  return _write_int(self.addr, "owner", v) end
 function Obj:set_skill(v)  return _write_int(self.addr, "skill", v) end
 function Obj:set_cart_speed(v)
-    local g = game_ok()
+    local g = game
     if g and g.call then local ok, r = pcall(g.call, "SetCartSpeed", self.addr, v); if ok then print(string.format("unit 0x%08X cart_speed -> %d", self.addr, v)); return r end end
     return _write_int(self.addr, "skill", v)
 end
 function Obj:cart_capacity()
-    local g = game_ok()
+    local g = game
     if g and g.call then local ok, r = pcall(g.call, "GetCartCapacity", self.addr); if ok then return r end end
     return _read_int(self.addr, "skill")
 end
 function Obj:set_cart_capacity(v)
-    local g = game_ok()
+    local g = game
     if g and g.call then local ok, r = pcall(g.call, "SetCartCapacity", self.addr, v); if ok then print(string.format("unit 0x%08X cart_capacity -> %d", self.addr, v)); return r end end
     return _write_int(self.addr, "skill", v)
 end
 function Obj:cart_goods(goodId)
-    local g = game_ok()
+    local g = game
     if g and g.call then local ok, r = pcall(g.call, "GetCartGoods", self.addr, goodId); if ok then return r end end
     error("GetCartGoods not registered or addr not a cart; try inventory.get")
 end
-function Obj:has_goods(goodId, amount) local g = game_ok(); if g and g.call then local ok, r = pcall(g.call, "HasCartGoods", self.addr, goodId, amount); if ok then return r end end; error("HasCartGoods not registered") end
+function Obj:has_goods(goodId, amount) local g = game; if g and g.call then local ok, r = pcall(g.call, "HasCartGoods", self.addr, goodId, amount); if ok then return r end end; error("HasCartGoods not registered") end
 function Obj:guard_level()
-    local g = game_ok()
+    local g = game
     if g and g.call then local ok, r = pcall(g.call, "GetCartGuardLevel", self.addr); if ok then return r end end
     error("GetCartGuardLevel not registered; run catalog.hunt unit/building + game.register first")
 end
 function Obj:caravan_value()
-    local g = game_ok()
+    local g = game
     if g and g.call then local ok, r = pcall(g.call, "GetCaravanValue", self.addr); if ok then return r end end
     error("GetCaravanValue not registered; run catalog.hunt unit/economy + game.register first")
 end
@@ -145,7 +140,7 @@ function Obj:pos()
 end
 
 function Obj:move(x, y)
-    local g = game_ok()
+    local g = game
     if not g then error("game not available") end
     -- prefer catalog-registered MoveUnit, else raw field writes
     if g.call then
@@ -161,7 +156,7 @@ function Obj:move(x, y)
 end
 
 function Obj:delete()
-    local g = game_ok()
+    local g = game
     if g and g.call then
         local ok, ret = pcall(g.call, "DeleteUnit", self.addr)
         if ok then print(string.format("unit 0x%08X delete -> %s", self.addr, tostring(ret))); return ret end
@@ -170,7 +165,7 @@ function Obj:delete()
 end
 
 function Obj:name()
-    local g = game_ok()
+    local g = game
     if not g then error("game not available") end
     local off = M.offsets.name
     local len = M.offsets.name_len or 32
@@ -183,7 +178,7 @@ function Obj:name()
 end
 
 function Obj:dump()
-    local str = _G.struct or (pcall(dofile, "lua/struct.lua") and _G.struct)
+    local str = require("struct")
     if str and str.dump then
         local ok = pcall(str.dump, self.addr, "Unit")
         if not ok then
@@ -213,13 +208,12 @@ end
 
 
 local function call_or_hint(name, ...)
-    local g = game_ok()
-    if g and g.call then
-        local ok, ret = pcall(g.call, name, ...)
-        if ok then return ret end
-        error(tostring(ret))
+    if not game.get_address(name) then
+        error(name .. " not registered; run unit.find()/catalog.hunt or game.register first", 2)
     end
-    error(name .. " not registered; run unit.find()/catalog.hunt or game.register first")
+    local ok, ret = pcall(game.call, name, ...)
+    if ok then return ret end
+    error(tostring(ret), 0)
 end
 
 function Obj:worker_count() return call_or_hint("GetWorkerCount", self.addr) end
@@ -229,7 +223,7 @@ function Obj:apprentice_count() return call_or_hint("GetApprenticeCount", self.a
 function Obj:is_alive() return call_or_hint("IsUnitAlive", self.addr) end
 function Obj:type_name()
     local id=self:utype()
-    local e=_G.enums or (pcall(dofile,"lua/enums.lua") and _G.enums)
+    local e=require("enums")
     if e and e.lookup then local ok,n=pcall(e.lookup,"unit",id); if ok and n then return n end end
     return tostring(id)
 end

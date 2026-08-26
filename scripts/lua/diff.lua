@@ -4,7 +4,7 @@
 -- valuescan/watch: use diff to find *what* changed when you don't
 -- know the exact value (e.g. inventory after a trade).
 --
---   diff = dofile('lua/diff.lua')    -- or already `diff`
+--   diff = require("diff")    -- or already `diff`
 --   a = diff.snap(0x12340000, 64)
 --   -- perform in-game action --
 --   b = diff.snap(0x12340000, 64)

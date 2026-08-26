@@ -6,7 +6,7 @@
 -- catalog registration state (and give the same hint errors if not
 -- yet registered).
 --
---   cheat = dofile('lua/cheat.lua')  -- or already `cheat`
+--   cheat = require("cheat")  -- or already `cheat`
 --   cheat.gold(999999)                -- player + legacy indexed api
 --   cheat.fame(100)
 --   cheat.health(pid, 100)
@@ -36,7 +36,7 @@ function M.gold(amount)
     if _G.player and _G.player.at and _G._cheat_player_addr then
         pcall(function() _G.player.at(_G._cheat_player_addr):set_gold(amount) end)
     end
-    print(string.format("cheat gold(%d) attempted — verify with game.call / valuescan", amount))
+    print(string.format("cheat gold(%d) attempted; verify with game.call / valuescan", amount))
     return amount
 end
 
@@ -60,7 +60,7 @@ function M.health(playerId, hp)
     end
     -- fallback to unit address if playerId looks like an address
     if playerId > 0x10000 and _G.unit then pcall(function() _G.unit.at(playerId):set_health(hp) end) end
-    print("cheat health attempted — verify with GetPlayerHealth / unit.at")
+    print("cheat health attempted; verify with GetPlayerHealth / unit.at")
 end
 
 function M.time(hours)

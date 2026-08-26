@@ -4,7 +4,7 @@
 -- boilerplate. Complements scan/valuescan (find it) -> pointer (follow
 -- it) -> struct (understand it).
 --
---   struct = dofile('lua/struct.lua')
+--   struct = require("struct")
 --   ffi.cdef[[ typedef struct { int gold; int fame; char name[32]; } Player; ]]
 --   struct.layout("Player")                 -- sizeof + offsets
 --   struct.dump(0x12340000, "Player")       -- field-aware dump (needs registration)
@@ -146,7 +146,7 @@ function M.layout(ctype)
         end
     else
         -- try ffi.offsetof introspection if fields were defined via ffi.cdef without registration
-        print("  (no field registry — register via struct.register('" .. ctype .. "', {...}) for field offsets)")
+        print("  (no field registry; register via struct.register('" .. ctype .. "', {...}) for field offsets)")
         -- attempt to probe common fields via pcall offsetof for already-defined struct
         -- we cannot enumerate field names, but we can show that offsetof works:
         -- e.g. ffi.offsetof("Player", "gold")
@@ -176,7 +176,7 @@ function M.dump(addr, ctype_or_fields, opts)
                 end
                 return v
             end
-            print(string.format("No field registry for '%s' — pass field table or register first. Falling back to hex dump.", ctype_name))
+            print(string.format("No field registry for '%s'. Pass a field table or register first; falling back to a hex dump.", ctype_name))
             return M.hex(addr, sz or 64)
         end
     elseif type(ctype_or_fields) == "table" then

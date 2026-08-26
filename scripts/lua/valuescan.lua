@@ -4,7 +4,7 @@
 -- addresses. Useful to locate player gold, health, inventory, etc.
 -- then hand the hit to `pointer` or `xrefs` to trace back to code.
 --
---   vs = dofile('lua/valuescan.lua')
+--   vs = require("valuescan")
 --   hits = vs.int32(1500, 0x00400000, 0x300000)        -- exact i32
 --   hits = vs.int32_range(1000, 5000, 0x00400000, 0x300000)
 --   hits = vs.float32(99.5, 0.01, 0x00400000, 0x300000) -- with epsilon

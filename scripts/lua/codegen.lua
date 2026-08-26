@@ -4,7 +4,7 @@
 -- table so discoveries can be pasted directly into your analysis
 -- files without hand-writing offsets.
 --
---   codegen = dofile('lua/codegen.lua')  -- or already `codegen`
+--   codegen = require("codegen")  -- or already `codegen`
 --   codegen.struct("Player", {
 --     {name="gold", type="int"},
 --     {name="fame", type="int"},

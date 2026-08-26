@@ -1,11 +1,11 @@
 -- Europa 1400 - Auto Discover
 --
 -- One-shot helper that chains the toolkit:
---   string/preset → func candidates (finder) → disasm → sig → probe
+--   string/preset -> func candidates (finder) -> disasm -> sig -> probe
 --
 -- Lets you go from a keyword to a tested game.register in one call.
 --
---   auto = dofile('lua/auto.lua')  -- or already `auto`
+--   auto = require("auto")  -- or already `auto`
 --   auto.discover("gold")                              -- preset-aware
 --   auto.discover("Gold", 0x00400000, 0x300000, {probe=true, register=true, sig="int()"})
 --   auto.quick(0x401000, {"int()", "void(int)"})       -- just probe+register
@@ -13,23 +13,18 @@
 
 local M = {}
 
-local function game_ok()
-    local g = _G.game
-    if g and g.register then return g end
-    local ok, m = pcall(dofile, "lua/gamecalls.lua")
-    if ok and m then return m end
-    return nil
-end
+local game = require("gamecalls")
+
 
 function M.discover(keyword, base, size, opts)
     opts = opts or {}
     base = base or 0x00400000
     size = size or 0x300000
-    local finder = _G.finder or (pcall(dofile, "lua/finder.lua") and _G.finder)
-    local disasm = _G.disasm or (pcall(dofile, "lua/disasm.lua") and _G.disasm)
-    local sig    = _G.sig    or (pcall(dofile, "lua/sig.lua")    and _G.sig)
-    local probe  = _G.probe  or (pcall(dofile, "lua/probe.lua")  and _G.probe)
-    local presets= _G.presets or (pcall(dofile, "lua/presets.lua") and _G.presets)
+    local finder = require("finder")
+    local disasm = require("disasm")
+    local sig    = require("sig")
+    local probe  = require("probe")
+    local presets= require("presets")
 
     -- Prefer presets.hunt if keyword matches a preset key, otherwise finder.string_func
     local candidates = {}
@@ -64,7 +59,7 @@ function M.discover(keyword, base, size, opts)
             if ok then probed = res end
         end
         if opts.register and type(opts.register) == "string" then
-            local game = game_ok()
+            local game = game
             if game then
                 local name = string.format("%s_auto_%d", tostring(keyword), i)
                 pcall(game.register, name, a, opts.register, "auto " .. tostring(keyword))
@@ -77,14 +72,14 @@ function M.discover(keyword, base, size, opts)
 end
 
 function M.quick(addr, sigs, name)
-    local probe = _G.probe or (pcall(dofile, "lua/probe.lua") and _G.probe)
+    local probe = require("probe")
     if not probe then error("probe not available") end
     local res = probe.at(addr, sigs)
     if name then
         local ok = false
         for _, r in ipairs(res or {}) do
             if r.ok then
-                local game = game_ok()
+                local game = game
                 if game then pcall(game.register, name, addr, r.sig, "auto quick") end
                 ok = true; break
             end
@@ -107,7 +102,7 @@ function M.from_string(name, needle, base, size, sig)
             if r.ok then sig = r.sig; break end
         end
     end
-    local game = game_ok()
+    local game = game
     if game then game.register(name, addr, sig, "auto from_string " .. tostring(needle)) end
     return addr, sig
 end

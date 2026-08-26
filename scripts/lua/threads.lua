@@ -4,7 +4,7 @@
 -- window/thread ids (system.window_info) with game logic threads
 -- and target the right thread for hooking/watching.
 --
---   threads = dofile('lua/threads.lua')  -- or already `threads`
+--   threads = require("threads")  -- or already `threads`
 --   threads.list()
 --   threads.current()                     -- current thread id
 
@@ -59,7 +59,7 @@ function M.list()
         local mark = (t.tid == cur) and " <- current" or ""
         print(string.format("  TID %5lu  pri %2d  delta %+d%s", t.tid, t.pri, t.delta, mark))
     end
-    if #out == 0 then print("  (none — snapshot may need PROCESS query privilege)") end
+    if #out == 0 then print("  (none; the snapshot may need PROCESS query privilege)") end
     return out
 end
 

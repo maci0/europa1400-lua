@@ -3,7 +3,7 @@
 -- Brute-force argument ranges for a probed function. Useful to learn
 -- valid values / counts without reading the disassembly first.
 --
---   fuzz = dofile('lua/fuzz.lua')  -- or already `fuzz`
+--   fuzz = require("fuzz")  -- or already `fuzz`
 --   fuzz.int("GetGold", 0, 10)                  -- try int 0..10
 --   fuzz.ints("DoThing", { {0,5}, {0,5} })      -- 2 args, 0..5 each
 --   fuzz.strings("ShowMessage", {"","hi","Gold"})
@@ -11,19 +11,14 @@
 
 local M = {}
 
-local function game_ok()
-    local g = _G.game
-    if g and g.call then return g end
-    local ok, m = pcall(dofile, "lua/gamecalls.lua")
-    if ok and m then return m end
-    return nil
-end
+local game = require("gamecalls")
+
 
 function M.raw(addr, sig_or_name, arg_sets)
     -- Overload: fuzz.raw(0x401000, "int(int)", {{0},{1}})
     --       or: fuzz.raw("GetGold", nil, {{},{0}}) -- name lookup via game
     local is_addr = type(addr) == "number" or (type(addr)=="string" and addr:match("^0[xX]"))
-    local game = game_ok()
+    local game = game
     if not is_addr and type(addr)=="string" then
         -- treat addr as game name
         if not game then error("game not available for name-based fuzz") end

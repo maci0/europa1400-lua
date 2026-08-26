@@ -4,7 +4,7 @@
 -- regions) without symbols. Useful to map game classes and their
 -- virtual methods before drilling with disasm/finder/trace.
 --
---   vtable = dofile('lua/vtable.lua')
+--   vtable = require("vtable")
 --   vtable.scan(0x00400000, 0x800000, 3)          -- 3+ consecutive code ptrs
 --   vtable.at(0x00AB1234, 12)                     -- dump 12 entries at addr
 --   vtable.follow(0x00AB1234, "thiscall(int)")    -- read ptr then try trace stub

@@ -4,7 +4,7 @@
 -- block, or replace game imports (file, registry, network, etc.)
 -- without inline code caves.
 --
---   hook = dofile('lua/hook.lua')
+--   hook = require("hook")
 --   hook.list("game.exe")                     -- show IAT slots
 --   old = hook.iat("game.exe", "kernel32.dll", "CreateFileA", myFn)
 --   hook.restore("game.exe", "kernel32.dll", "CreateFileA")

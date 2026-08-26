@@ -3,7 +3,7 @@
 -- Resolves multi-level pointers (as seen in Cheat Engine) to a final
 -- address, then optionally reads a typed value there.
 --
---   ptr = dofile('lua/pointer.lua')
+--   ptr = require("pointer")
 --   addr = ptr.resolve("game.exe+0x1A3F00", {0x10, 0x20, 0x8})
 --   val  = ptr.read(addr, "int")          -- or ptr.deref(addr)
 --   ptr.dump_chain("game.exe+0x1A3F00", {0x10, 0x20, 0x8})
@@ -87,7 +87,7 @@ function M.resolve(base, offsets)
     -- many tutorials treat last as add as well. We do: deref all but last, then add last.
     -- If caller wants final deref, append 0.
     if #offsets == 1 then
-        -- single offset: base + off is the address (no deref) — but if base itself
+        -- single offset: base + off is the address (no deref), but if base itself
         -- is a pointer, caller should pass base as pointer value. Keep simple.
         return cur + last
     end
