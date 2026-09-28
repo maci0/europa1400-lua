@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0
+
+Version bump. No behavior changes since 0.1.0.
+
 ## 0.1.0
 
 First tagged release. Everything below was already in the tree; this entry records

@@ -19,7 +19,7 @@
 #include "logging.h"
 
 #define CONSOLE_BUFFER_SIZE 4096
-#define CONSOLE_VERSION "0.1.0"
+#define CONSOLE_VERSION "0.2.0"
 #define CONSOLE_TITLE "Europa 1400 - Lua Console " CONSOLE_VERSION
 #define SCRIPT_SUBDIR "/lua/"
 #define INIT_SCRIPT "init.lua"
